@@ -33,7 +33,7 @@
     .chip{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)}
     .pill{padding:10px 16px;border-radius:14px;background:linear-gradient(135deg,var(--brand),var(--brand-2));font-weight:700;color:#0a0a0a;box-shadow:0 8px 24px var(--ring)}
 
-    /* HERO (left-anchored, full width) */
+    /* HERO */
     .hero{display:grid;grid-template-columns:1fr 1fr;padding:64px 28px;gap:32px;align-items:center}
     @media(max-width:900px){.hero{grid-template-columns:1fr;text-align:center}}
     .hero h1{font-size:clamp(32px,5vw,56px);font-weight:800;line-height:1.1;margin-bottom:18px}
@@ -43,7 +43,7 @@
     .hero-card{border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
     .hero-card img{width:100%;height:auto;object-fit:cover}
 
-    /* Sections (edge-to-edge) */
+    /* Sections */
     section{padding:60px 28px}
     .section-head{margin-bottom:20px}
     .section-head h2{font-size:clamp(24px,3vw,34px);margin-bottom:8px}
@@ -53,7 +53,7 @@
     .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
     .shot{border-radius:var(--radius);overflow:hidden;background:#111;box-shadow:var(--shadow);cursor:pointer}
 
-    /* Travel cards (banner fix: full-bleed + overlay) */
+    /* Travel cards */
     .travel-grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
     .place{position:relative;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
     .place img{width:100%;height:100%;object-fit:cover;filter:saturate(1.05) contrast(1.02)}
@@ -64,6 +64,8 @@
 
     footer{padding:32px;text-align:center;color:var(--muted);border-top:1px solid rgba(255,255,255,.08)}
     .empty{color:var(--muted);opacity:.8}
+    .err{padding:12px;border:1px dashed rgba(255,255,255,.25);border-radius:12px;background:rgba(255,0,0,.08);color:#ffdede}
+    code.inline{background:rgba(255,255,255,.06);padding:2px 6px;border-radius:8px}
   </style>
 </head>
 <body>
@@ -104,6 +106,7 @@
         <p class="lead">Photos from <code>/portfolio/</code></p>
       </div>
       <div class="gallery" id="gallery"><p class="empty">Loading photos…</p></div>
+      <div id="portfolioError"></div>
     </section>
 
     <!-- TRAVELS -->
@@ -113,6 +116,7 @@
         <p class="lead">Images from <code>/travels/</code> (any subfolders)</p>
       </div>
       <div class="travel-grid" id="travelGallery"><p class="empty">Loading trips…</p></div>
+      <div id="travelsError"></div>
     </section>
   </main>
 
@@ -120,47 +124,59 @@
 
   <script>
     // Footer year
-    document.getElementById('y').textContent = new Date().getFullYear();
+    (function(){ const y=document.getElementById('y'); if(y) y.textContent = new Date().getFullYear(); })();
 
     // -------- Auto-load from GitHub --------
-    const GH = { owner: "Hanley-Darlington", repo: "about", ref: "main" }; // update if branch changes
+    const GH = { owner: "Hanley-Darlington", repo: "about", ref: "main" }; // <- update if your branch changes
     const IMG_EXT = [".jpg",".jpeg",".png",".webp",".gif",".avif"];
     const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+    function showError(where, msg){
+      const el = document.getElementById(where);
+      if(!el) return;
+      el.innerHTML = `<div class="err">${msg}</div>`;
+    }
+
     async function gh(path){
       const url = `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(GH.ref)}`;
-      const r = await fetch(url, { headers: { "Accept":"application/vnd.github+json" } });
-      if(!r.ok) throw new Error(`GitHub ${r.status}: ${path}`);
+      const r = await fetch(url, { mode: "cors", headers: { "Accept":"application/vnd.github+json" } });
+      if(!r.ok){
+        // Surface the GitHub error JSON body if present
+        let detail = "";
+        try{ const j = await r.json(); detail = j.message ? ` — ${j.message}` : ""; }catch{}
+        throw new Error(`GitHub ${r.status} for <code class="inline">${path}</code>${detail}`);
+      }
       return r.json();
     }
 
     function cacheGet(key){
-      try{ const raw = localStorage.getItem(key); if(!raw) return null;
-           const {t,data} = JSON.parse(raw); return (Date.now()-t<CACHE_TTL)?data:null; } catch{ return null; }
+      try{
+        const raw = localStorage.getItem(key);
+        if(!raw) return null;
+        const {t,data} = JSON.parse(raw);
+        return (Date.now()-t<CACHE_TTL) ? data : null;
+      }catch{ return null; }
     }
-    function cacheSet(key,data){ localStorage.setItem(key, JSON.stringify({t:Date.now(), data})); }
+    function cacheSet(key,data){ try{ localStorage.setItem(key, JSON.stringify({t:Date.now(), data})); }catch{} }
 
     async function listPortfolio(){
-      try{
-        const files = await gh("portfolio");
-        return files
-          .filter(f => f.type==="file" && IMG_EXT.some(ext => f.name.toLowerCase().endsWith(ext)))
-          .map(f => ({ src: f.download_url, alt: f.name }));
-      }catch{ return []; }
+      const files = await gh("portfolio");
+      return files
+        .filter(f => f.type==="file" && IMG_EXT.some(ext => f.name.toLowerCase().endsWith(ext)))
+        .map(f => ({ src: f.download_url, alt: f.name }));
     }
 
     async function listTravelsRecursive(dir="travels"){
       let out = [];
-      try{
-        const items = await gh(dir);
-        for(const it of items){
-          if(it.type==="file" && IMG_EXT.some(ext => it.name.toLowerCase().endsWith(ext))){
-            out.push({ src: it.download_url, alt: it.name });
-          }else if(it.type==="dir"){
-            out = out.concat(await listTravelsRecursive(it.path));
-          }
+      const items = await gh(dir);
+      for(const it of items){
+        if(it.type==="file" && IMG_EXT.some(ext => it.name.toLowerCase().endsWith(ext))){
+          out.push({ src: it.download_url, alt: it.name, path: it.path });
+        }else if(it.type==="dir"){
+          try{ out = out.concat(await listTravelsRecursive(it.path)); }
+          catch(e){ /* ignore missing subdir errors */ }
         }
-      }catch{ /* base folder may not exist yet */ }
+      }
       return out;
     }
 
@@ -183,12 +199,12 @@
       // Group by immediate folder name under /travels/
       const groups = {};
       for(const f of list){
-        const m = f.src.match(/\/travels\/([^\/]+)\//);
+        const m = /^travels\/([^/]+)\//.exec(f.path);
         const key = m ? decodeURIComponent(m[1]) : "travel";
         (groups[key] ||= []).push(f);
       }
       Object.entries(groups).forEach(([folder, files])=>{
-        const hero = files[0]; // use first image for banner
+        const hero = files[0];
         const card = document.createElement("article");
         card.className = "place";
         card.innerHTML = `
@@ -204,11 +220,21 @@
 
     async function loadAll(){
       const pKey="cache_portfolio", tKey="cache_travels";
-      let p = cacheGet(pKey), t = cacheGet(tKey);
-      if(!p){ p = await listPortfolio(); cacheSet(pKey,p); }
-      if(!t){ t = await listTravelsRecursive(); cacheSet(tKey,t); }
-      renderPortfolio(p);
-      renderTravels(t);
+      try{
+        let p = cacheGet(pKey);
+        if(!p){ p = await listPortfolio(); cacheSet(pKey,p); }
+        renderPortfolio(p);
+      }catch(e){
+        showError("portfolioError", e.message);
+      }
+
+      try{
+        let t = cacheGet(tKey);
+        if(!t){ t = await listTravelsRecursive(); cacheSet(tKey,t); }
+        renderTravels(t);
+      }catch(e){
+        showError("travelsError", e.message);
+      }
     }
 
     loadAll();
