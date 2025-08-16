@@ -1,6 +1,5 @@
-git init
-git branch -M main
-git remote add origin git@github.com:your-username/your-repo.git
-git add .
-git commit -m "Initial commit: site content"
-git push -u origin main
+git pull origin main
+# (edit index.html in VS Code)
+git add index.html
+git commit -m "Fixed homepage layout"
+git push origin main
