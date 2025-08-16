@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>William Darlington</title>
 
-  <!-- Favicon (cache-busted) -->
-  <link rel="icon" type="image/png" href="user.png?v=3" sizes="32x32" />
-  <link rel="icon" type="image/png" href="user.png?v=3" sizes="192x192" />
-  <link rel="apple-touch-icon" href="user.png?v=3" sizes="180x180" />
-  <link rel="shortcut icon" href="user.png?v=3" />
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="user.png?v=4" sizes="32x32" />
+  <link rel="icon" type="image/png" href="user.png?v=4" sizes="192x192" />
+  <link rel="apple-touch-icon" href="user.png?v=4" sizes="180x180" />
+  <link rel="shortcut icon" href="user.png?v=4" />
   <meta name="theme-color" content="#0b0e14" />
 
   <!-- Fonts -->
@@ -36,12 +36,15 @@
     .container{width:min(1200px,92%);margin-inline:auto}
 
     /* NAV */
-    header{position:sticky;top:0;z-index:50;background:rgba(15,21,36,.78);backdrop-filter:saturate(150%) blur(12px);border-bottom:1px solid rgba(255,255,255,.08)}
-    .nav{display:flex;justify-content:space-between;align-items:center;padding:14px 28px}
-    .brand{font-weight:800}
+    header{position:sticky;top:0;z-index:50;background:rgba(15,21,36,.78);backdrop-filter:saturate(150%) blur(12px);border-bottom:1px solid rgba(255,255,255,.08);cursor:pointer}
+    .nav{display:flex;justify-content:flex-end;align-items:center;padding:14px 28px;gap:12px}
     .nav-links{display:flex;gap:12px;flex-wrap:wrap}
     .chip{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)}
     .pill{padding:10px 16px;border-radius:14px;background:linear-gradient(135deg,var(--brand),var(--brand-2));font-weight:700;color:#0a0a0a;box-shadow:0 8px 24px var(--ring)}
+    /* make header clickable but not links */
+    header a{pointer-events:auto}
+    header .nav{pointer-events:none}
+    header .nav a{pointer-events:auto}
 
     /* Sections + HERO */
     section{padding:24px 0 52px}
@@ -62,20 +65,22 @@
     /* Grids */
     .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px}
     .shot{border-radius:var(--radius);overflow:hidden;background:#111;box-shadow:var(--shadow);cursor:pointer}
-    /* preserve original image aspect ratio (no cropping) */
+    /* images: preserve natural aspect */
     .shot img{width:100%;height:auto;transition:transform .25s ease}
+    /* videos inside tiles */
+    .shot.video video{width:100%;height:auto;display:block;background:#000;border:0;outline:0}
     .shot:hover img{transform:scale(1.02)}
     .stream-grid{margin-top:12px}
 
     .travel-grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
     .place{position:relative;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
-    .place img{width:100%;height:100%;object-fit:cover;filter:saturate(1.05) contrast(1.02)}
+    .place img,.place video{width:100%;height:100%;object-fit:cover;display:block;background:#000}
     .place .overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.65),rgba(0,0,0,.08) 60%);display:flex;flex-direction:column;justify-content:flex-end;padding:20px}
     .place h4{margin:0 0 6px;font-size:18px}
     .place p{margin:0 0 10px;font-size:14px;color:var(--muted)}
     .place a{align-self:start}
 
-    /* Footer (only socials, no copyright) */
+    /* Footer (only socials) */
     footer{padding:28px 0;border-top:1px solid rgba(255,255,255,.08)}
     .footer-center{display:flex;flex-direction:column;align-items:center;gap:10px}
     .social{display:flex;gap:10px}
@@ -84,7 +89,6 @@
 <body>
 <header>
   <div class="nav container">
-    <a href="#/" class="brand">Home</a>
     <nav class="nav-links">
       <a class="chip" href="#/portfolio">Portfolio</a>
       <a class="chip" href="#/travels">Travel</a>
@@ -167,16 +171,26 @@
   // ---------- Config ----------
   var GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
   var IMG_EXT = ['.jpg','.jpeg','.png','.webp','.gif','.avif'];
+  var VIDEO_EXT = ['.mp4','.webm'];
   var TTL = 5*60*1000;
 
-  function isImg(name){
+  // make the WHOLE header (except links) click to Home
+  document.querySelector('header').addEventListener('click', function(e){
+    if (e.target.closest('a')) return;
+    location.hash = '#/';
+  });
+
+  function hasExt(name, exts){
     name = (name||'').toLowerCase();
-    for (var i=0;i<IMG_EXT.length;i++){
-      var ext = IMG_EXT[i];
+    for (var i=0;i<exts.length;i++){
+      var ext = exts[i];
       if (name.indexOf(ext, name.length-ext.length) !== -1) return true;
     }
     return false;
   }
+  function isImg(n){ return hasExt(n, IMG_EXT); }
+  function isVideo(n){ return hasExt(n, VIDEO_EXT); }
+  function isMedia(n){ return isImg(n) || isVideo(n); }
 
   function cacheGet(k){
     try{
@@ -201,13 +215,18 @@
     });
   }
 
-  function listDirImages(dir){
+  function listDirMedia(dir){
     return gh(dir).then(function(items){
       var out = [];
       for(var i=0;i<items.length;i++){
         var it = items[i];
-        if(it.type === 'file' && isImg(it.name)){
-          out.push({src:it.download_url, alt:it.name, path:it.path});
+        if(it.type === 'file' && isMedia(it.name)){
+          out.push({
+            src: it.download_url,
+            alt: it.name,
+            path: it.path,
+            type: isVideo(it.name) ? 'video' : 'image'
+          });
         }
       }
       return out;
@@ -216,7 +235,7 @@
 
   function listPortfolio(){
     var k='p_cache'; var d=cacheGet(k); if(d) return Promise.resolve(d);
-    return listDirImages('portfolio').then(function(v){ cacheSet(k,v); return v; });
+    return listDirMedia('portfolio').then(function(v){ cacheSet(k,v); return v; });
   }
 
   function listTravelAll(){
@@ -227,8 +246,13 @@
         var chain = Promise.resolve();
         for(var i=0;i<items.length;i++){
           (function(it){
-            if(it.type==='file' && isImg(it.name)){
-              out.push({src:it.download_url, alt:it.name, path:it.path});
+            if(it.type==='file' && isMedia(it.name)){
+              out.push({
+                src: it.download_url,
+                alt: it.name,
+                path: it.path,
+                type: isVideo(it.name) ? 'video' : 'image'
+              });
             }else if(it.type==='dir'){
               chain = chain.then(function(){ return rec(it.path); });
             }
@@ -241,18 +265,42 @@
   }
 
   function listAlbum(folder){
-    return listDirImages('travels/'+folder);
+    return listDirMedia('travels/'+folder);
   }
 
   function heroFromProfile(){
-    return listDirImages('profile').then(function(pics){
-      return pics.length ? pics[0].src : 'user.png';
+    return listDirMedia('profile').then(function(pics){
+      // prefer an image for hero; fallback to user.png
+      for (var i=0;i<pics.length;i++) if (pics[i].type==='image') return pics[i].src;
+      return (pics[0] && pics[0].src) || 'user.png';
     }).catch(function(){ return 'user.png'; });
   }
 
   // ---------- DOM helpers ----------
   function byId(id){ return document.getElementById(id); }
   function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
+
+  // play/pause videos when on screen (saves CPU)
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      var v = en.target;
+      if (en.isIntersecting){ try{ v.play(); }catch(e){} }
+      else { try{ v.pause(); }catch(e){} }
+    });
+  }, {threshold:0.35});
+
+  function makeVideo(src){
+    var v = document.createElement('video');
+    v.src = src;
+    v.muted = true;
+    v.loop = true;
+    v.autoplay = true;
+    v.playsInline = true;
+    v.preload = 'metadata';
+    v.controls = false;
+    io.observe(v);
+    return v;
+  }
 
   function mountGrid(elId, files, onClick){
     var el = byId(elId); clear(el);
@@ -261,11 +309,20 @@
       el.appendChild(p); return;
     }
     for(var i=0;i<files.length;i++){
-      var f = files[i];
-      var fig = document.createElement('figure'); fig.className='shot';
-      var img = new Image(); img.src=f.src; img.alt=f.alt; img.loading='lazy'; img.decoding='async';
-      if(onClick){ (function(file){ img.addEventListener('click', function(){ onClick(file); }); })(f); }
-      fig.appendChild(img); el.appendChild(fig);
+      (function(f){
+        var fig = document.createElement('figure'); fig.className='shot';
+        if (f.type === 'video'){
+          fig.className += ' video';
+          var v = makeVideo(f.src);
+          fig.appendChild(v);
+          if(onClick){ fig.addEventListener('click', function(){ onClick(f); }); }
+        } else {
+          var img = new Image(); img.src=f.src; img.alt=f.alt; img.loading='lazy'; img.decoding='async';
+          if(onClick){ img.addEventListener('click', function(){ onClick(f); }); }
+          fig.appendChild(img);
+        }
+        el.appendChild(fig);
+      })(files[i]);
     }
   }
 
@@ -311,21 +368,28 @@
           var pth = all[i].path;
           var m = /^travels\/([^\/]+)\//.exec(pth);
           var key = m ? decodeURIComponent(m[1]) : 'trip';
-          if(!groups[key]) groups[key] = [];
-          groups[key].push(all[i]);
+          (groups[key]||(groups[key]=[])).push(all[i]);
         }
         var wrap = byId('travelCards'); clear(wrap);
         for(var folder in groups){
           if(!groups.hasOwnProperty(folder)) continue;
           var files = groups[folder];
           var card = document.createElement('article'); card.className='place';
-          var img = new Image(); img.src = files[0].src; img.alt = folder; img.loading='lazy';
+
+          // show video if first media is video, else image
+          if (files[0].type === 'video'){
+            card.appendChild(makeVideo(files[0].src));
+          } else {
+            var img = new Image(); img.src = files[0].src; img.alt = folder; img.loading='lazy';
+            card.appendChild(img);
+          }
+
           var ov = document.createElement('div'); ov.className='overlay';
           var h4 = document.createElement('h4'); h4.appendChild(document.createTextNode(folder.replace(/[-_]/g,' ')));
-          var p2 = document.createElement('p'); p2.appendChild(document.createTextNode(files.length+' photo'+(files.length>1?'s':'')));
+          var p2 = document.createElement('p'); p2.appendChild(document.createTextNode(files.length+' file'+(files.length>1?'s':'')));
           var a = document.createElement('a'); a.className='chip'; a.href = '#/travel/'+encodeURIComponent(folder); a.appendChild(document.createTextNode('View shots'));
           ov.appendChild(h4); ov.appendChild(p2); ov.appendChild(a);
-          card.appendChild(img); card.appendChild(ov);
+          card.appendChild(ov);
           wrap.appendChild(card);
         }
       }).catch(function(e){ err('travelsError', e.message); });
@@ -346,10 +410,10 @@
     Promise.all([listPortfolio(), listTravelAll()]).then(function(arr){
       var p = arr[0], t = arr[1];
       var P = [], T = [], i;
-      for(i=0;i<p.length;i++){ P.push({ src:p[i].src, alt:p[i].alt, kind:'portfolio' }); }
+      for(i=0;i<p.length;i++){ P.push({ src:p[i].src, alt:p[i].alt, kind:'portfolio', type:p[i].type }); }
       for(i=0;i<t.length;i++){
         var m = /^travels\/([^\/]+)\//.exec(t[i].path);
-        T.push({ src:t[i].src, alt:t[i].alt, kind:'travel', folder:m?decodeURIComponent(m[1]):'trip' });
+        T.push({ src:t[i].src, alt:t[i].alt, kind:'travel', folder:m?decodeURIComponent(m[1]):'trip', type:t[i].type });
       }
       var all = P.concat(T);
       for(i=all.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var tmp=all[i]; all[i]=all[j]; all[j]=tmp; }
