@@ -1,0 +1,2 @@
+# about
+CARELESS PEOPLE

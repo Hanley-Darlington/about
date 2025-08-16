@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Your Name – Portfolio & Travels</title>
+  <meta name="description" content="Portfolio and travel gallery website" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b0e14;          /* base background */
+      --panel:#121826;       /* cards/nav */
+      --muted:#94a3b8;       /* text secondary */
+      --text:#e8eefc;        /* text primary */
+      --brand:#7c3aed;       /* accent */
+      --brand-2:#22d3ee;     /* accent 2 */
+      --ring:rgba(124,58,237,.45);
+      --shadow:0 10px 30px rgba(0,0,0,.45);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(180deg,var(--bg),#0e1320 50%,#0a0f1d 100%);color:var(--text)}
+    a{color:inherit;text-decoration:none}
+    img{max-width:100%;display:block}
+    .container{width:min(1120px,92%);margin-inline:auto}
+
+    /* NAV */
+    header{position:sticky;top:0;z-index:50;background:rgba(18,24,38,.75);backdrop-filter:saturate(140%) blur(10px);border-bottom:1px solid rgba(255,255,255,.06)}
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
+    .brand{display:flex;gap:12px;align-items:center;font-weight:700}
+    .logo{width:36px;height:36px;border-radius:10px;background:conic-gradient(from 220deg at 50% 50%,var(--brand),var(--brand-2),var(--brand));box-shadow:0 6px 20px var(--ring)}
+    .nav a{opacity:.85}
+    .nav a:hover{opacity:1}
+    .nav-links{display:flex;gap:18px}
+    .btn{display:inline-flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#0a0a0a;font-weight:700;box-shadow:0 10px 25px var(--ring);border:0;cursor:pointer}
+    .btn.ghost{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.12);box-shadow:none}
+
+    /* HERO */
+    .hero{padding:80px 0 56px}
+    .hero-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:28px;align-items:center}
+    .hero h1{font-size:clamp(28px,5vw,56px);line-height:1.04;margin:0 0 16px}
+    .hero p{color:var(--muted);font-size:clamp(14px,1.7vw,18px)}
+    .hero .cta{display:flex;gap:12px;margin-top:22px}
+    .hero-card{border-radius:var(--radius);background:radial-gradient(1200px 600px at -10% -20%,rgba(124,58,237,.35),transparent 40%),radial-gradient(800px 400px at 120% -10%,rgba(34,211,238,.25),transparent 35%),var(--panel);padding:18px;box-shadow:var(--shadow);}
+    .hero-card img{border-radius:14px}
+
+    /* SECTION WRAPPER */
+    section{padding:56px 0}
+    .section-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:16px}
+    .eyebrow{letter-spacing:.16em;text-transform:uppercase;color:#93c5fd;font-weight:700;font-size:12px}
+    .title{font-size:clamp(22px,4vw,34px);margin:6px 0 10px}
+    .lead{color:var(--muted);max-width:65ch}
+
+    /* CARDS */
+    .grid{display:grid;gap:18px}
+    .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+    .grid.cols-2{grid-template-columns:repeat(2,1fr)}
+    @media (max-width:900px){.hero-grid{grid-template-columns:1fr}.grid.cols-3{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:640px){.grid.cols-3,.grid.cols-2{grid-template-columns:1fr}}
+
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.06);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);transition:transform .2s ease, box-shadow .2s ease}
+    .card:hover{transform:translateY(-4px);box-shadow:0 14px 40px rgba(0,0,0,.55)}
+    .card-media{aspect-ratio:16/10;background:#0b1220}
+    .card-body{padding:14px 14px 16px}
+    .card-title{font-weight:700;margin:2px 0 6px}
+    .card-meta{font-size:12px;color:var(--muted)}
+
+    /* GALLERY */
+    .gallery{columns:4 280px;column-gap:14px}
+    .shot{break-inside:avoid;border-radius:14px;overflow:hidden;margin:0 0 14px;border:1px solid rgba(255,255,255,.06);box-shadow:var(--shadow);cursor:pointer}
+    .shot img{width:100%;height:auto;display:block}
+
+    /* LIGHTBOX */
+    .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px}
+    .lightbox.open{display:flex}
+    .lightbox img{max-width:min(92vw,1200px);max-height:84vh;border-radius:12px}
+    .lightbox .close{position:absolute;top:20px;right:20px}
+
+    /* TRAVEL SECTION */
+    .travel-grid{display:grid;gap:18px;grid-template-columns:repeat(12,1fr)}
+    .place{grid-column:span 4;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.06);border-radius:16px;overflow:hidden}
+    .place .banner{aspect-ratio:16/9;background:#0d1324}
+    .place .copy{padding:14px 14px 18px}
+    .place h4{margin:4px 0 6px}
+    .place p{color:var(--muted);font-size:14px}
+    @media (max-width:1000px){.place{grid-column:span 6}}
+    @media (max-width:640px){.place{grid-column:span 12}}
+
+    footer{padding:32px 0;color:var(--muted);border-top:1px solid rgba(255,255,255,.06)}
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <header>
+    <div class="container nav">
+      <a href="#top" class="brand"><span class="logo" aria-hidden></span> <span>Your Name</span></a>
+      <nav class="nav-links">
+        <a href="#portfolio">Portfolio</a>
+        <a href="#photos">Photos</a>
+        <a href="#travels">Travels</a>
+        <a href="#contact" class="btn ghost">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- HERO / TOP SECTION (click into portfolio) -->
+  <main id="top" class="hero">
+    <div class="container hero-grid">
+      <div>
+        <div class="eyebrow">Designer · Developer · Traveler</div>
+        <h1>Building clean products and collecting messy stories.</h1>
+        <p>Welcome to my corner of the internet. Tap the button below to jump into a curated selection of work I’m proud of. Scroll further for photo dumps and the places I’ve wandered.</p>
+        <div class="cta">
+          <a class="btn" href="#portfolio" aria-label="View portfolio">View my portfolio</a>
+          <a class="btn ghost" href="#photos" aria-label="See photos">See photos</a>
+        </div>
+      </div>
+      <div class="hero-card">
+        <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1600&auto=format&fit=crop" alt="Hero preview of code and travel collage" />
+      </div>
+    </div>
+  </main>
+
+  <!-- PORTFOLIO -->
+  <section id="portfolio">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Portfolio</div>
+          <h2 class="title">Selected Work</h2>
+        </div>
+        <a class="btn ghost" href="https://github.com/your-username/your-repo" target="_blank" rel="noopener">View on GitHub</a>
+      </div>
+
+      <div class="grid cols-3">
+        <!-- Example project cards. Duplicate & edit -->
+        <a class="card" href="#" target="_blank" rel="noopener">
+          <img class="card-media" src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=1600&auto=format&fit=crop" alt="Project screenshot"/>
+          <div class="card-body">
+            <div class="card-title">Project One</div>
+            <div class="card-meta">Role · Tech · 2025</div>
+          </div>
+        </a>
+        <a class="card" href="#" target="_blank" rel="noopener">
+          <img class="card-media" src="https://images.unsplash.com/photo-1515879218367-8466d910aaa4?q=80&w=1600&auto=format&fit=crop" alt="Project screenshot"/>
+          <div class="card-body">
+            <div class="card-title">Project Two</div>
+            <div class="card-meta">Role · Tech · 2025</div>
+          </div>
+        </a>
+        <a class="card" href="#" target="_blank" rel="noopener">
+          <img class="card-media" src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=1600&auto=format&fit=crop" alt="Project screenshot"/>
+          <div class="card-body">
+            <div class="card-title">Project Three</div>
+            <div class="card-meta">Role · Tech · 2025</div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHOTOS (gallery) -->
+  <section id="photos">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Photos</div>
+          <h2 class="title">A running photo stream</h2>
+          <p class="lead">Drop your JPEG/PNG files into <code>/assets/photos</code> and update the <code>data-</code> attributes below to tag them with a location. Click any image for a lightbox view.</p>
+        </div>
+        <div>
+          <button class="btn ghost" id="filterAny">All</button>
+          <button class="btn ghost" data-filter="europe">Europe</button>
+          <button class="btn ghost" data-filter="asia">Asia</button>
+          <button class="btn ghost" data-filter="americas">Americas</button>
+        </div>
+      </div>
+
+      <div class="gallery" id="gallery">
+        <!-- Example photos (replace src with your files) -->
+        <figure class="shot" data-place="europe">
+          <img src="https://images.unsplash.com/photo-1505764706515-aa95265c5abc?q=80&w=1200&auto=format&fit=crop" alt="Alps"/>
+        </figure>
+        <figure class="shot" data-place="asia">
+          <img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1200&auto=format&fit=crop" alt="Tokyo"/>
+        </figure>
+        <figure class="shot" data-place="americas">
+          <img src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1200&auto=format&fit=crop" alt="Yosemite"/>
+        </figure>
+        <figure class="shot" data-place="europe">
+          <img src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=1200&auto=format&fit=crop" alt="Venice"/>
+        </figure>
+        <figure class="shot" data-place="asia">
+          <img src="https://images.unsplash.com/photo-1431274172761-fca41d930114?q=80&w=1200&auto=format&fit=crop" alt="Bali"/>
+        </figure>
+        <figure class="shot" data-place="americas">
+          <img src="https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=1200&auto=format&fit=crop" alt="NYC"/>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRAVELS -->
+  <section id="travels">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Travels</div>
+          <h2 class="title">Places I’ve visited</h2>
+          <p class="lead">Each card can link to a dedicated page or anchor into the photo gallery using filters.</p>
+        </div>
+      </div>
+
+      <div class="travel-grid">
+        <!-- Duplicate .place blocks for more locations -->
+        <article class="place" data-filter="europe">
+          <img class="banner" src="https://images.unsplash.com/photo-1505764706515-aa95265c5abc?q=80&w=1600&auto=format&fit=crop" alt="Swiss Alps"/>
+          <div class="copy">
+            <h4>Swiss Alps</h4>
+            <p>Snow lines, crisp air, and too much fondue. Click to see photos tagged Europe.</p>
+            <p><a href="#photos" class="btn ghost to-filter" data-filter="europe">View Europe shots</a></p>
+          </div>
+        </article>
+        <article class="place" data-filter="asia">
+          <img class="banner" src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1600&auto=format&fit=crop" alt="Tokyo"/>
+          <div class="copy">
+            <h4>Tokyo</h4>
+            <p>Neon, noodles, and late-night arcades.</p>
+            <p><a href="#photos" class="btn ghost to-filter" data-filter="asia">View Asia shots</a></p>
+          </div>
+        </article>
+        <article class="place" data-filter="americas">
+          <img class="banner" src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1600&auto=format&fit=crop" alt="Yosemite"/>
+          <div class="copy">
+            <h4>California</h4>
+            <p>Cliffs, coastlines, and dramatic skies.</p>
+            <p><a href="#photos" class="btn ghost to-filter" data-filter="americas">View Americas shots</a></p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT / FOOTER -->
+  <section id="contact">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Contact</div>
+          <h2 class="title">Let’s work together</h2>
+          <p class="lead">Email me at <a href="mailto:you@example.com">you@example.com</a> or DM me on <a href="https://www.instagram.com/" target="_blank" rel="noopener">Instagram</a>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <footer>
+    <div class="container">© <span id="y"></span> Your Name · Built for GitHub Pages</div>
+  </footer>
+
+  <div class="lightbox" id="lightbox" aria-hidden="true" role="dialog">
+    <button class="btn ghost close" aria-label="Close" id="closeLightbox">Close ✕</button>
+    <img alt="Expanded photo" id="lightboxImg" />
+  </div>
+
+  <script>
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(a=>{
+      a.addEventListener('click',e=>{
+        const id=a.getAttribute('href');
+        const el=document.querySelector(id);
+        if(el){e.preventDefault();el.scrollIntoView({behavior:'smooth',block:'start'});}
+      });
+    });
+
+    // Footer year
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    // Lightbox logic
+    const lb = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lightboxImg');
+    document.querySelectorAll('.shot img').forEach(img=>{
+      img.addEventListener('click',()=>{ lbImg.src = img.src; lb.classList.add('open'); lb.setAttribute('aria-hidden','false'); });
+    });
+    document.getElementById('closeLightbox').addEventListener('click',()=>{ lb.classList.remove('open'); lb.setAttribute('aria-hidden','true'); lbImg.removeAttribute('src'); });
+    lb.addEventListener('click',e=>{ if(e.target===lb){ lb.classList.remove('open'); lbImg.removeAttribute('src'); }});
+    document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ lb.classList.remove('open'); lbImg.removeAttribute('src'); }});
+
+    // Gallery filter buttons
+    function applyFilter(key){
+      document.querySelectorAll('#photos [data-filter], #travels .to-filter').forEach(b=>b.classList.remove('active'));
+      const shots = document.querySelectorAll('#gallery .shot');
+      shots.forEach(s=>{ s.style.display = (!key || s.dataset.place===key)?'block':'none'; });
+    }
+
+    document.getElementById('filterAny').addEventListener('click',()=>applyFilter(null));
+    document.querySelectorAll('[data-filter]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const key = btn.dataset.filter;
+        if(btn.classList.contains('to-filter')){
+          // coming from travel card: ensure we are on photos then filter
+          setTimeout(()=>applyFilter(key),200);
+        } else {
+          applyFilter(key);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
