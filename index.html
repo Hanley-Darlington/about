@@ -103,6 +103,9 @@
       width:100%;height:100%;object-fit:cover;background:#000;
     }
 
+    /* Prevent rows from stretching; each tile matches its image height */
+    #albumGrid { align-items: start; }
+
     /* Album page: preserve originals (no crop) */
     #albumGrid .shot{ aspect-ratio:auto; }
     #albumGrid .shot img, #albumGrid .shot video{
