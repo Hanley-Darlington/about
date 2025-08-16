@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>William Darlington</title>
 
-  <!-- Favicons (root-relative so they work on GitHub Pages) -->
-  <link rel="icon" type="image/png" href="/favicon/user.png" sizes="32x32">
-  <link rel="icon" type="image/png" href="/favicon/user.png" sizes="192x192">
-  <link rel="apple-touch-icon" href="/favicon/user.png" sizes="180x180">
+  <!-- Favicon (root-relative to survive hash routing) -->
+  <link rel="icon" href="/favicon/user.png" sizes="32x32">
   <link rel="shortcut icon" href="/favicon/user.png">
   <meta name="theme-color" content="#0b0e14" />
 
@@ -31,7 +29,7 @@
         radial-gradient(1000px 500px at -20% 10%, rgba(124,58,237,.09), transparent 60%),
         var(--bg);
     }
-    img{max-width:100%;display:block}
+    img,video{display:block;max-width:100%}
     a{color:inherit;text-decoration:none}
     .container{width:min(1200px,92%);margin-inline:auto}
 
@@ -41,23 +39,27 @@
       background:rgba(15,21,36,.78);
       backdrop-filter:saturate(150%) blur(12px);
       border-bottom:1px solid rgba(255,255,255,.08);
-      cursor:pointer;
+      cursor:pointer; /* whole bar = Home */
     }
     .nav{display:flex;justify-content:flex-end;align-items:center;padding:14px 28px;gap:12px}
     .nav-links{display:flex;gap:12px;flex-wrap:wrap}
-    .chip{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)}
-    .pill{padding:10px 16px;border-radius:14px;background:linear-gradient(135deg,var(--brand),var(--brand-2));font-weight:700;color:#0a0a0a;box-shadow:0 8px 24px var(--ring)}
-    /* make header clickable, but nav links ignore header click */
-    header a{pointer-events:auto}
+    .chip{
+      padding:8px 12px;border-radius:999px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.08)
+    }
+    .pill{
+      padding:10px 16px;border-radius:14px;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      font-weight:700;color:#0a0a0a;box-shadow:0 8px 24px var(--ring)
+    }
+    /* allow links to be clickable even though header is */
     header .nav{pointer-events:none}
     header .nav a{pointer-events:auto}
 
     /* Sections + HERO */
     section{padding:24px 0 52px}
-    .hero{
-      display:grid;grid-template-columns:1fr 1fr;
-      padding:64px 0;gap:32px;align-items:center
-    }
+    .hero{display:grid;grid-template-columns:1fr 1fr;padding:64px 0;gap:32px;align-items:center}
     @media(max-width:900px){.hero{grid-template-columns:1fr;text-align:center}}
     .hero h1{font-size:clamp(32px,5vw,56px);font-weight:800;line-height:1.1;margin-bottom:10px}
     .hero p{color:var(--muted)}
@@ -71,23 +73,42 @@
     .view-head h2{font-size:clamp(24px,3vw,34px)}
     .back{padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14)}
 
-    /* Grids */
-    .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px}
-    .shot{border-radius:var(--radius);overflow:hidden;background:#111;box-shadow:var(--shadow);cursor:pointer}
-    .shot img{width:100%;height:auto}
+    /* Grids — tiles never crop images or videos */
+    .gallery{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+      gap:18px
+    }
+    .shot{
+      border-radius:var(--radius);
+      overflow:hidden; /* for rounded corners */
+      background:#111;
+      box-shadow:var(--shadow);
+      cursor:pointer
+    }
+    .shot img{width:100%;height:auto}               /* images = no crop */
     .shot.video video{
-      width:100%;height:auto;display:block;background:#000;border:0;outline:0;object-fit:contain; /* no crop */
+      width:100%;height:auto;object-fit:contain;    /* videos = never crop */
+      background:#000
     }
     .stream-grid{margin-top:12px}
 
-    /* Travel cards (NO CROP + consistent height) */
-    .travel-grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
-    .place{
-      position:relative;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);
-      aspect-ratio:16/9; background:#000; /* letterbox */
+    /* Travel index cards (consistent 16:9 box) */
+    .travel-grid{
+      display:grid;gap:20px;
+      grid-template-columns:repeat(auto-fill,minmax(300px,1fr))
     }
-    .place img,.place video{
-      width:100%;height:100%;object-fit:contain;display:block;background:#000; /* show full media */
+    .place{
+      position:relative;border-radius:var(--radius);
+      overflow:hidden;box-shadow:var(--shadow);
+      aspect-ratio:16/9;                             /* consistent card height */
+      background:#000
+    }
+    .place img{
+      width:100%;height:100%;object-fit:cover        /* photos = hero look */
+    }
+    .place.video video{
+      width:100%;height:100%;object-fit:contain      /* videos = no crop */
     }
     .place .overlay{
       position:absolute;inset:0;
@@ -98,7 +119,7 @@
     .place p{margin:0 0 10px;font-size:14px;color:var(--muted)}
     .place a{align-self:start}
 
-    /* Footer (only socials) */
+    /* Footer */
     footer{padding:28px 0;border-top:1px solid rgba(255,255,255,.08)}
     .footer-center{display:flex;flex-direction:column;align-items:center;gap:10px}
     .social{display:flex;gap:10px}
@@ -186,13 +207,13 @@
 (function(){
   'use strict';
 
-  // ---------- Config ----------
+  /* ---------------- Config ---------------- */
   var GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
-  var IMG_EXT = ['.jpg','.jpeg','.png','.webp','.gif','.avif'];
+  var IMG_EXT   = ['.jpg','.jpeg','.png','.webp','.gif','.avif'];
   var VIDEO_EXT = ['.mp4','.webm'];
   var TTL = 5*60*1000;
 
-  // Make the WHOLE header (except links) click to Home
+  // whole header (except the links) = Home
   document.querySelector('header').addEventListener('click', function(e){
     if (e.target.closest('a')) return;
     location.hash = '#/';
@@ -293,7 +314,7 @@
     }).catch(function(){ return 'user.png'; });
   }
 
-  // ---------- DOM helpers ----------
+  /* ---------------- DOM helpers ---------------- */
   function byId(id){ return document.getElementById(id); }
   function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
 
@@ -342,7 +363,7 @@
     clear(el); el.appendChild(chip);
   }
 
-  // ---------- Router ----------
+  /* ---------------- Router ---------------- */
   var views = {
     home: byId('view-home'),
     portfolio: byId('view-portfolio'),
@@ -370,10 +391,10 @@
     if(h.indexOf('/travels') === 0){
       show('travels');
       listTravelAll().then(function(all){
+        // group by first folder after /travels/
         var groups = {};
         for(var i=0;i<all.length;i++){
-          var pth = all[i].path;
-          var m = /^travels\/([^\/]+)\//.exec(pth);
+          var m = /^travels\/([^\/]+)\//.exec(all[i].path);
           var key = m ? decodeURIComponent(m[1]) : 'trip';
           (groups[key]||(groups[key]=[])).push(all[i]);
         }
@@ -382,15 +403,14 @@
           if(!groups.hasOwnProperty(folder)) continue;
           var files = groups[folder];
           var card = document.createElement('article'); card.className='place';
-
-          // preview = first media (video preferred)
+          // show the first media; videos are marked so CSS uses object-fit:contain
           if (files[0].type === 'video'){
+            card.classList.add('video');
             card.appendChild(makeVideo(files[0].src));
           } else {
             var img = new Image(); img.src = files[0].src; img.alt = folder; img.loading='lazy';
             card.appendChild(img);
           }
-
           var ov = document.createElement('div'); ov.className='overlay';
           var h4 = document.createElement('h4'); h4.appendChild(document.createTextNode(folder.replace(/[-_]/g,' ')));
           var p2 = document.createElement('p'); p2.appendChild(document.createTextNode(files.length+' file'+(files.length>1?'s':'')));
@@ -415,15 +435,14 @@
     // HOME
     show('home');
     Promise.all([listPortfolio(), listTravelAll()]).then(function(arr){
-      var p = arr[0], t = arr[1];
-      var P = [], T = [], i;
-      for(i=0;i<p.length;i++){ P.push({ src:p[i].src, alt:p[i].alt, kind:'portfolio', type:p[i].type }); }
-      for(i=0;i<t.length;i++){
-        var m = /^travels\/([^\/]+)\//.exec(t[i].path);
-        T.push({ src:t[i].src, alt:t[i].alt, kind:'travel', folder:m?decodeURIComponent(m[1]):'trip', type:t[i].type });
+      var p = arr[0], t = arr[1], P=[], T=[];
+      for(var i=0;i<p.length;i++) P.push({ src:p[i].src, alt:p[i].alt, kind:'portfolio', type:p[i].type });
+      for(var j=0;j<t.length;j++){
+        var m = /^travels\/([^\/]+)\//.exec(t[j].path);
+        T.push({ src:t[j].src, alt:t[j].alt, kind:'travel', folder:m?decodeURIComponent(m[1]):'trip', type:t[j].type });
       }
       var all = P.concat(T);
-      for(i=all.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var tmp=all[i]; all[i]=all[j]; all[j]=tmp; }
+      for(var k=all.length-1;k>0;k--){ var r=Math.floor(Math.random()*(k+1)); var tmp=all[k]; all[k]=all[r]; all[r]=tmp; }
       var pick = all.slice(0, Math.min(12, all.length));
       mountGrid('streamGrid', pick, function(file){
         if(file.kind==='portfolio'){ location.hash = '#/portfolio'; }
