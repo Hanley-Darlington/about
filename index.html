@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>William Darlington</title>
 
-  <!-- Favicon: user.png -->
-  <link rel="icon" type="image/png" href="user.png" sizes="32x32" />
-  <link rel="icon" type="image/png" href="user.png" sizes="192x192" />
-  <link rel="apple-touch-icon" href="user.png" sizes="180x180" />
-  <link rel="shortcut icon" href="user.png" />
+  <!-- Favicon (cache-busted) -->
+  <link rel="icon" type="image/png" href="user.png?v=3" sizes="32x32" />
+  <link rel="icon" type="image/png" href="user.png?v=3" sizes="192x192" />
+  <link rel="apple-touch-icon" href="user.png?v=3" sizes="180x180" />
+  <link rel="shortcut icon" href="user.png?v=3" />
   <meta name="theme-color" content="#0b0e14" />
 
   <!-- Fonts -->
@@ -17,11 +17,23 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
   <style>
-    :root{ --bg:#0b0e14; --muted:#94a3b8; --text:#e8eefc; --brand:#7c3aed; --brand-2:#22d3ee; --ring:rgba(124,58,237,.4); --shadow:0 14px 40px rgba(0,0,0,.5); --radius:20px; }
+    :root{
+      --bg:#0b0e14; --muted:#94a3b8; --text:#e8eefc;
+      --brand:#7c3aed; --brand-2:#22d3ee; --ring:rgba(124,58,237,.4);
+      --shadow:0 14px 40px rgba(0,0,0,.5); --radius:20px;
+    }
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.55}
+    body{
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      color:var(--text); line-height:1.55;
+      background:
+        radial-gradient(1200px 500px at 120% -10%, rgba(34,211,238,.08), transparent 60%),
+        radial-gradient(1000px 500px at -20% 10%, rgba(124,58,237,.09), transparent 60%),
+        var(--bg);
+    }
     img{max-width:100%;display:block}
     a{color:inherit;text-decoration:none}
+    .container{width:min(1200px,92%);margin-inline:auto}
 
     /* NAV */
     header{position:sticky;top:0;z-index:50;background:rgba(15,21,36,.78);backdrop-filter:saturate(150%) blur(12px);border-bottom:1px solid rgba(255,255,255,.08)}
@@ -32,7 +44,8 @@
     .pill{padding:10px 16px;border-radius:14px;background:linear-gradient(135deg,var(--brand),var(--brand-2));font-weight:700;color:#0a0a0a;box-shadow:0 8px 24px var(--ring)}
 
     /* HERO */
-    .hero{display:grid;grid-template-columns:1fr 1fr;padding:64px 28px;gap:32px;align-items:center}
+    section{padding:24px 0 52px}
+    .hero{display:grid;grid-template-columns:1fr 1fr;padding:64px 0;gap:32px;align-items:center}
     @media(max-width:900px){.hero{grid-template-columns:1fr;text-align:center}}
     .hero h1{font-size:clamp(32px,5vw,56px);font-weight:800;line-height:1.1;margin-bottom:10px}
     .hero p{color:var(--muted)}
@@ -40,8 +53,7 @@
     @media(max-width:900px){.hero-card{justify-self:center}}
     .hero-card img{width:100%;height:auto;object-fit:cover}
 
-    /* Sections / views */
-    section{padding:24px 28px 52px}
+    /* Views */
     .hidden{display:none}
     .view-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
     .view-head h2{font-size:clamp(24px,3vw,34px)}
@@ -50,6 +62,8 @@
     /* Grids */
     .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
     .shot{border-radius:var(--radius);overflow:hidden;background:#111;box-shadow:var(--shadow);cursor:pointer}
+    .shot img{aspect-ratio:4/3;object-fit:cover;transition:transform .25s ease}
+    .shot:hover img{transform:scale(1.02)}
     .stream-grid{margin-top:12px}
 
     .travel-grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
@@ -60,17 +74,16 @@
     .place p{margin:0 0 10px;font-size:14px;color:var(--muted)}
     .place a{align-self:start}
 
-    footer{padding:24px 28px;border-top:1px solid rgba(255,255,255,.08)}
-    .footer-wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-    .footer-left{color:#9aa7bd}
-    .footer-right{display:flex;gap:10px}
-    .empty{color:#9aa7bd;opacity:.85}
-    .err{padding:12px;border:1px dashed rgba(255,255,255,.25);border-radius:12px;background:rgba(255,0,0,.08);color:#ffdede}
+    /* Footer */
+    footer{padding:28px 0;border-top:1px solid rgba(255,255,255,.08)}
+    .footer-center{display:flex;flex-direction:column;align-items:center;gap:10px}
+    .social{display:flex;gap:10px}
+    .copyright{color:#9aa7bd;font-size:14px}
   </style>
 </head>
 <body>
 <header>
-  <div class="nav">
+  <div class="nav container">
     <a href="#/" class="brand">William Darlington</a>
     <nav class="nav-links">
       <a class="chip" href="#/portfolio">Portfolio</a>
@@ -84,191 +97,284 @@
 <main>
   <!-- HOME -->
   <section id="view-home">
-    <div class="hero">
-      <div>
-        <h1>William Darlington</h1>
-        <p>Vires in Numeris</p>
+    <div class="container">
+      <div class="hero">
+        <div>
+          <h1>William Darlington</h1>
+          <p>Vires in Numeris</p>
+        </div>
+        <div class="hero-card">
+          <img id="heroImg" src="user.png" alt="Profile">
+        </div>
       </div>
-      <div class="hero-card">
-        <img id="heroImg" src="user.png" alt="Profile">
+
+      <div class="gallery stream-grid" id="streamGrid">
+        <p style="color:#9aa7bd">Loading photos…</p>
       </div>
     </div>
-
-    <!-- Random mixed stream -->
-    <div class="gallery stream-grid" id="streamGrid"><p class="empty">Loading photos…</p></div>
   </section>
 
-  <!-- PORTFOLIO (full page) -->
+  <!-- PORTFOLIO -->
   <section id="view-portfolio" class="hidden">
-    <div class="view-head">
-      <h2>Portfolio</h2>
-      <a class="back" href="#/">← Home</a>
+    <div class="container">
+      <div class="view-head">
+        <h2>Portfolio</h2>
+        <a class="back" href="#/">← Home</a>
+      </div>
+      <div class="gallery" id="portfolioGrid"><p style="color:#9aa7bd">Loading…</p></div>
+      <div id="portfolioError"></div>
     </div>
-    <div class="gallery" id="portfolioGrid"><p class="empty">Loading…</p></div>
-    <div id="portfolioError"></div>
   </section>
 
-  <!-- TRAVEL ALBUMS (index) -->
+  <!-- TRAVEL INDEX -->
   <section id="view-travels" class="hidden">
-    <div class="view-head">
-      <h2>Travel</h2>
-      <a class="back" href="#/">← Home</a>
+    <div class="container">
+      <div class="view-head">
+        <h2>Travel</h2>
+        <a class="back" href="#/">← Home</a>
+      </div>
+      <div class="travel-grid" id="travelCards"><p style="color:#9aa7bd">Loading…</p></div>
+      <div id="travelsError"></div>
     </div>
-    <div class="travel-grid" id="travelCards"><p class="empty">Loading…</p></div>
-    <div id="travelsError"></div>
   </section>
 
   <!-- SINGLE TRAVEL ALBUM -->
   <section id="view-album" class="hidden">
-    <div class="view-head">
-      <h2 id="albumTitle">Album</h2>
-      <a class="back" href="#/travels">← All trips</a>
+    <div class="container">
+      <div class="view-head">
+        <h2 id="albumTitle">Album</h2>
+        <a class="back" href="#/travels">← All trips</a>
+      </div>
+      <div class="gallery" id="albumGrid"><p style="color:#9aa7bd">Loading…</p></div>
+      <div id="albumError"></div>
     </div>
-    <div class="gallery" id="albumGrid"><p class="empty">Loading…</p></div>
-    <div id="albumError"></div>
   </section>
 </main>
 
 <footer>
-  <div class="footer-wrap">
-    <div class="footer-left">© <span id="y"></span> William Darlington</div>
-    <div class="footer-right">
+  <div class="container footer-center">
+    <div class="social">
       <a class="chip" href="https://www.linkedin.com/in/william-darlington-736475212/" target="_blank" rel="noopener">LinkedIn</a>
-      <a class="chip" href="https://instagram.com/wi11.4m" target="_blank" rel="noopener">@wi11.4m</a>
+      <a class="chip" href="https://instagram.com/wi11.4m" target="_blank" rel="noopener">Insta</a>
     </div>
+    <div class="copyright">© <span id="y"></span> William Darlington</div>
   </div>
 </footer>
 
 <script>
-  // Footer year
+(function(){
+  'use strict';
+
   document.getElementById('y').textContent = new Date().getFullYear();
 
-  // ---------- GitHub data ----------
-  const GH = { owner:"Hanley-Darlington", repo:"about", ref:"main" };
-  const IMG_EXT = [".jpg",".jpeg",".png",".webp",".gif",".avif"];
-  const TTL = 5*60*1000;
+  // ---------- Config ----------
+  var GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
+  var IMG_EXT = ['.jpg','.jpeg','.png','.webp','.gif','.avif'];
+  var TTL = 5*60*1000;
 
-  async function gh(path){
-    const url = `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(GH.ref)}`;
-    const r = await fetch(url, {headers:{Accept:"application/vnd.github+json"}});
-    if(!r.ok){ let m=""; try{const j=await r.json(); m=j.message||"";}catch{} throw new Error(`GitHub ${r.status} ${path} ${m}`); }
-    return r.json();
+  function isImg(name){
+    name = (name||'').toLowerCase();
+    for (var i=0;i<IMG_EXT.length;i++){ if (name.indexOf(IMG_EXT[i], name.length-IMG_EXT[i].length) !== -1) return true; }
+    return false;
   }
-  const cache = (k,v)=> (v===undefined? (d=localStorage.getItem(k))&& (d=JSON.parse(d)).t>Date.now()-TTL?d.data:null
-                                   : localStorage.setItem(k, JSON.stringify({t:Date.now(),data:v})));
-  const isImg = n => IMG_EXT.some(e=>n.toLowerCase().endsWith(e));
 
-  async function listDirImages(dir){
+  function cacheGet(k){
     try{
-      const items = await gh(dir);
-      return items.filter(i=>i.type==="file" && isImg(i.name))
-                  .map(i=>({src:i.download_url,alt:i.name,path:i.path}));
-    }catch{ return []; }
+      var raw = localStorage.getItem(k);
+      if(!raw) return null;
+      var obj = JSON.parse(raw);
+      if(Date.now() - obj.t > TTL) return null;
+      return obj.data;
+    }catch(e){ return null; }
   }
-  async function listPortfolio(){ const k="p_cache"; let d=cache(k); if(d) return d; d=await listDirImages("portfolio"); cache(k,d); return d; }
-  async function listAlbum(folder){ return listDirImages(`travels/${folder}`); }
+  function cacheSet(k,v){ try{ localStorage.setItem(k, JSON.stringify({t:Date.now(), data:v})); }catch(e){} }
 
-  async function listTravelAll(){
-    const k="t_cache"; let d=cache(k); if(d) return d;
-    let out=[]; async function rec(dir){
-      try{
-        const items = await gh(dir);
-        for(const it of items){
-          if(it.type==="file" && isImg(it.name)) out.push({src:it.download_url,alt:it.name,path:it.path});
-          else if(it.type==="dir") await rec(it.path);
+  function gh(path){
+    var url = 'https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/contents/'+encodeURIComponent(path)+'?ref='+encodeURIComponent(GH.ref);
+    return fetch(url, {headers:{'Accept':'application/vnd.github+json'}}).then(function(r){
+      if(!r.ok){
+        return r.json().catch(function(){return {message:''};}).then(function(j){
+          throw new Error('GitHub '+r.status+' '+path+' '+(j.message||''));
+        });
+      }
+      return r.json();
+    });
+  }
+
+  function listDirImages(dir){
+    return gh(dir).then(function(items){
+      var out = [];
+      for(var i=0;i<items.length;i++){
+        var it = items[i];
+        if(it.type === 'file' && isImg(it.name)){
+          out.push({src:it.download_url, alt:it.name, path:it.path});
         }
-      }catch{}
+      }
+      return out;
+    }).catch(function(){ return []; });
+  }
+
+  function listPortfolio(){
+    var k='p_cache'; var d=cacheGet(k); if(d) return Promise.resolve(d);
+    return listDirImages('portfolio').then(function(v){ cacheSet(k,v); return v; });
+  }
+
+  function listTravelAll(){
+    var k='t_cache'; var d=cacheGet(k); if(d) return Promise.resolve(d);
+    var out=[];
+    function rec(dir){
+      return gh(dir).then(function(items){
+        var chain = Promise.resolve();
+        for(var i=0;i<items.length;i++){
+          (function(it){
+            if(it.type==='file' && isImg(it.name)){
+              out.push({src:it.download_url, alt:it.name, path:it.path});
+            }else if(it.type==='dir'){
+              chain = chain.then(function(){ return rec(it.path); });
+            }
+          })(items[i]);
+        }
+        return chain;
+      }).catch(function(){ /* missing folder ok */ });
     }
-    await rec("travels"); cache(k,out); return out;
+    return rec('travels').then(function(){ cacheSet(k,out); return out; });
   }
 
-  async function heroFromProfile(){
-    try{ const pics = await listDirImages("profile"); return pics[0]?.src || "user.png"; }
-    catch{ return "user.png"; }
+  function listAlbum(folder){
+    return listDirImages('travels/'+folder);
   }
 
-  // ---------- Render helpers ----------
+  function heroFromProfile(){
+    return listDirImages('profile').then(function(pics){
+      return pics.length ? pics[0].src : 'user.png';
+    }).catch(function(){ return 'user.png'; });
+  }
+
+  // ---------- DOM helpers ----------
+  function byId(id){ return document.getElementById(id); }
+
+  function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
+
   function mountGrid(elId, files, onClick){
-    const el = document.getElementById(elId);
-    el.innerHTML = "";
-    if(!files.length){ el.innerHTML = `<p class="empty">Nothing here yet.</p>`; return; }
-    for(const f of files){
-      const fig=document.createElement("figure"); fig.className="shot";
-      const img=new Image(); img.src=f.src; img.alt=f.alt; img.loading="lazy";
-      if(onClick) img.addEventListener('click',()=>onClick(f));
+    var el = byId(elId); clear(el);
+    if(!files.length){
+      var p = document.createElement('p'); p.style.color='#9aa7bd'; p.appendChild(document.createTextNode('Nothing here yet.'));
+      el.appendChild(p); return;
+    }
+    for(var i=0;i<files.length;i++){
+      var f = files[i];
+      var fig = document.createElement('figure'); fig.className='shot';
+      var img = new Image(); img.src=f.src; img.alt=f.alt; img.loading='lazy'; img.decoding='async';
+      if(onClick){ (function(file){ img.addEventListener('click', function(){ onClick(file); }); })(f); }
       fig.appendChild(img); el.appendChild(fig);
     }
   }
-  function showError(id,msg){ const el=document.getElementById(id); if(el) el.innerHTML=`<div class="err">${msg}</div>`; }
+
+  function err(elId, msg){
+    var el = byId(elId); if(!el) return;
+    var chip = document.createElement('div');
+    chip.className='chip';
+    chip.style.borderColor='#ff8a8a'; chip.style.background='rgba(255,0,0,.12)'; chip.style.color='#ffdede';
+    chip.appendChild(document.createTextNode(msg));
+    clear(el); el.appendChild(chip);
+  }
 
   // ---------- Router ----------
-  const views = {
-    home: document.getElementById('view-home'),
-    portfolio: document.getElementById('view-portfolio'),
-    travels: document.getElementById('view-travels'),
-    album: document.getElementById('view-album')
+  var views = {
+    home: byId('view-home'),
+    portfolio: byId('view-portfolio'),
+    travels: byId('view-travels'),
+    album: byId('view-album')
   };
-  function show(view){ Object.values(views).forEach(v=>v.classList.add('hidden')); views[view].classList.remove('hidden'); window.scrollTo(0,0); }
 
-  async function route(){
-    const h = location.hash.replace(/^#/, '');
-    if(h.startsWith('/portfolio')){
-      show('portfolio');
-      try{ mountGrid('portfolioGrid', await listPortfolio()); }
-      catch(e){ showError('portfolioError', e.message); }
-    }
-    else if(h.startsWith('/travels')){
-      show('travels');
-      try{
-        const all = await listTravelAll();
-        const groups = {};
-        for(const f of all){
-          const m = /^travels\/([^/]+)\//.exec(f.path);
-          const key = m ? decodeURIComponent(m[1]) : "trip";
-          (groups[key] ||= []).push(f);
-        }
-        const cards = document.getElementById('travelCards'); cards.innerHTML="";
-        Object.entries(groups).forEach(([folder, files])=>{
-          const card = document.createElement('article'); card.className='place';
-          card.innerHTML = `
-            <img src="${files[0].src}" alt="${folder}">
-            <div class="overlay">
-              <h4>${folder.replace(/[-_]/g,' ')}</h4>
-              <p>${files.length} photo${files.length>1?'s':''}</p>
-              <a class="chip" href="#/travel/${encodeURIComponent(folder)}">View shots</a>
-            </div>`;
-          cards.appendChild(card);
-        });
-      }catch(e){ showError('travelsError', e.message); }
-    }
-    else if(h.startsWith('/travel/')){
-      const folder = decodeURIComponent(h.split('/')[2]||'').trim();
-      show('album'); document.getElementById('albumTitle').textContent = folder.replace(/[-_]/g,' ');
-      try{ mountGrid('albumGrid', await listAlbum(folder)); }
-      catch(e){ showError('albumError', e.message); }
-    }
-    else{
-      show('home');
-      try{
-        const [p, t] = await Promise.all([listPortfolio(), listTravelAll()]);
-        const P = p.map(f => ({...f, kind:'portfolio'}));
-        const T = t.map(f => { const m=/^travels\/([^/]+)\//.exec(f.path); return {...f, kind:'travel', folder:m?decodeURIComponent(m[1]):'trip'}; });
-        const all = P.concat(T);
-        for(let i=all.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [all[i],all[j]]=[all[j],all[i]]; }
-        const pick = all.slice(0, Math.min(12, all.length));
-        mountGrid('streamGrid', pick, (file)=>{ location.hash = file.kind==='portfolio' ? '#/portfolio' : '#/travel/'+encodeURIComponent(file.folder); });
-      }catch(e){
-        document.getElementById('streamGrid').innerHTML = `<div class="err">${e.message}</div>`;
-      }
-    }
+  function show(name){
+    for(var k in views){ if(views.hasOwnProperty(k)) views[k].classList.add('hidden'); }
+    views[name].classList.remove('hidden');
+    window.scrollTo(0,0);
   }
+
+  function route(){
+    var h = (location.hash||'').replace(/^#/, '');
+
+    if(h.indexOf('/portfolio') === 0){
+      show('portfolio');
+      listPortfolio().then(function(list){
+        mountGrid('portfolioGrid', list, null);
+      }).catch(function(e){ err('portfolioError', e.message); });
+      return;
+    }
+
+    if(h.indexOf('/travels') === 0){
+      show('travels');
+      listTravelAll().then(function(all){
+        var groups = {};
+        for(var i=0;i<all.length;i++){
+          var p = all[i].path;
+          var m = /^travels\/([^\/]+)\//.exec(p);
+          var key = m ? decodeURIComponent(m[1]) : 'trip';
+          if(!groups[key]) groups[key] = [];
+          groups[key].push(all[i]);
+        }
+        var wrap = byId('travelCards'); clear(wrap);
+        for(var folder in groups){
+          if(!groups.hasOwnProperty(folder)) continue;
+          var files = groups[folder];
+          var card = document.createElement('article'); card.className='place';
+          var img = new Image(); img.src = files[0].src; img.alt = folder; img.loading='lazy';
+          var ov = document.createElement('div'); ov.className='overlay';
+          var h4 = document.createElement('h4'); h4.appendChild(document.createTextNode(folder.replace(/[-_]/g,' ')));
+          var p2 = document.createElement('p'); p2.appendChild(document.createTextNode(files.length+' photo'+(files.length>1?'s':'')));
+          var a = document.createElement('a'); a.className='chip'; a.href = '#/travel/'+encodeURIComponent(folder); a.appendChild(document.createTextNode('View shots'));
+          ov.appendChild(h4); ov.appendChild(p2); ov.appendChild(a);
+          card.appendChild(img); card.appendChild(ov);
+          wrap.appendChild(card);
+        }
+      }).catch(function(e){ err('travelsError', e.message); });
+      return;
+    }
+
+    if(h.indexOf('/travel/') === 0){
+      var parts = h.split('/');
+      var folder = decodeURIComponent(parts[2]||'').trim();
+      show('album'); byId('albumTitle').textContent = folder.replace(/[-_]/g,' ');
+      listAlbum(folder).then(function(list){ mountGrid('albumGrid', list, null); })
+        .catch(function(e){ err('albumError', e.message); });
+      return;
+    }
+
+    // HOME
+    show('home');
+    Promise.all([listPortfolio(), listTravelAll()]).then(function(arr){
+      var p = arr[0], t = arr[1];
+      var P = [], T = [], i;
+      for(i=0;i<p.length;i++){ P.push({ src:p[i].src, alt:p[i].alt, kind:'portfolio' }); }
+      for(i=0;i<t.length;i++){
+        var m = /^travels\/([^\/]+)\//.exec(t[i].path);
+        T.push({ src:t[i].src, alt:t[i].alt, kind:'travel', folder:m?decodeURIComponent(m[1]):'trip' });
+      }
+      var all = P.concat(T);
+      // shuffle
+      for(i=all.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var tmp=all[i]; all[i]=all[j]; all[j]=tmp; }
+      var pick = all.slice(0, Math.min(12, all.length));
+      mountGrid('streamGrid', pick, function(file){
+        if(file.kind==='portfolio'){ location.hash = '#/portfolio'; }
+        else{ location.hash = '#/travel/'+encodeURIComponent(file.folder); }
+      });
+    }).catch(function(e){
+      var el = byId('streamGrid'); clear(el);
+      var d = document.createElement('div'); d.className='chip';
+      d.style.borderColor='#ff8a8a'; d.style.background='rgba(255,0,0,.12)'; d.style.color='#ffdede';
+      d.appendChild(document.createTextNode(e.message));
+      el.appendChild(d);
+    });
+  }
+
   window.addEventListener('hashchange', route);
 
   // Init
-  (async function init(){
-    try{ document.getElementById('heroImg').src = await heroFromProfile(); }catch{}
-    await route();
-  })();
+  heroFromProfile().then(function(src){ byId('heroImg').src = src; }).catch(function(){});
+  route();
+})();
 </script>
 </body>
 </html>
