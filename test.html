@@ -1,0 +1,370 @@
+<script>
+(function(){
+  'use strict';
+
+  /* =======================
+     DEV SWITCH
+     ======================= */
+  var DEV_MODE = true; // ← set to false for normal behavior
+
+  /* -------- Config -------- */
+  var GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
+  var IMG_EXT   = ['.jpg','.jpeg','.png','.webp','.gif','.avif'];
+  var VIDEO_EXT = ['.mp4','.webm'];
+  var CACHE_TTL = 24 * 60 * 60 * 1000; // 24h (ignored in DEV_MODE)
+  var CACHE_VERSION = 'v1.2';          // bump to invalidate local cache in PROD
+
+  // Will be set after we fetch the latest commit
+  var CURRENT_SHA = null;
+
+  // Header (except links) goes Home
+  document.addEventListener('DOMContentLoaded', function(){
+    var header = document.querySelector('header');
+    if (header){
+      header.addEventListener('click', function(e){
+        if (e.target.closest('a')) return;
+        location.hash = '#/';
+      });
+    }
+  });
+
+  /* -------- Utils -------- */
+  function log(){ if(DEV_MODE && console && console.debug) console.debug.apply(console, arguments); }
+
+  function hasExt(name, exts){
+    name = (name||'').toLowerCase();
+    for (var i=0;i<exts.length;i++){
+      var ext = exts[i];
+      if (name.indexOf(ext, name.length-ext.length) !== -1) return true;
+    }
+    return false;
+  }
+  function isImg(n){ return hasExt(n, IMG_EXT); }
+  function isVideo(n){ return hasExt(n, VIDEO_EXT); }
+  function isMedia(n){ return isImg(n) || isVideo(n); }
+
+  /* -------- Cache helpers (disabled in DEV_MODE) -------- */
+  function cacheKey(k){ return GH.owner+':'+GH.repo+':'+GH.ref+':'+CACHE_VERSION+':'+k; }
+  function cacheGet(k){
+    if (DEV_MODE) return null; // force fresh every time
+    try{
+      var raw = localStorage.getItem(cacheKey(k));
+      if(!raw) return null;
+      var obj = JSON.parse(raw);
+      if(Date.now() - obj.t > CACHE_TTL) return null;
+      return obj.data;
+    }catch(e){ return null; }
+  }
+  function cacheSet(k,v){
+    if (DEV_MODE) return; // no writes in dev
+    try{ localStorage.setItem(cacheKey(k), JSON.stringify({t:Date.now(), data:v})); }catch(e){}
+  }
+
+  function fetchJSON(url){
+    log('fetchJSON:', url);
+    return fetch(url, {headers:{'Accept':'application/vnd.github+json'}, cache: 'no-store'}).then(function(r){
+      if(!r.ok){
+        return r.json().catch(function(){return {message:''};}).then(function(j){
+          throw new Error('HTTP '+r.status+' '+(j.message||''));
+        });
+      }
+      return r.json();
+    });
+  }
+
+  // raw URL builder (add cache-buster in DEV)
+  function rawURL(path){
+    var base = 'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path);
+    var v = DEV_MODE ? (CURRENT_SHA || Date.now()) : (CURRENT_SHA || CACHE_VERSION);
+    return base + '?v=' + encodeURIComponent(v);
+  }
+
+  // Simple image fallback chain: .avif -> .webp -> .jpg/.png
+  function makeImgWithFallback(src, alt){
+    var img = new Image();
+    img.alt = alt || '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.src = src;
+
+    img.addEventListener('error', function(){
+      var s = img.src;
+      log('Image failed:', s);
+      if (/\.avif(\?|$)/i.test(s)){
+        img.src = s.replace(/\.avif(\?.*)?$/i, '.webp$1');
+        log(' → fallback to webp:', img.src);
+      } else if (/\.webp(\?|$)/i.test(s)){
+        img.src = s.replace(/\.webp(\?.*)?$/i, '.jpg$1');
+        log(' → fallback to jpg:', img.src);
+      } else if (/\.jpe?g(\?|$)/i.test(s)){
+        img.src = s.replace(/\.jpe?g(\?.*)?$/i, '.png$1');
+        log(' → fallback to png:', img.src);
+      }
+    });
+    return img;
+  }
+
+  function makeVideo(src){
+    var v=document.createElement('video');
+    v.src=src; v.muted=true; v.loop=true; v.autoplay=true;
+    v.playsInline=true; v.preload='metadata'; v.controls=false;
+    return v;
+  }
+
+  /* -------- Manifest building -------- */
+  function buildManifestFromTree(tree){
+    var files = tree && tree.tree ? tree.tree : [];
+    var manifest = { portfolio:[], travels:{}, profile:[] };
+    for (var i=0;i<files.length;i++){
+      var it = files[i];
+      if (it.type !== 'blob') continue;
+      if (!isMedia(it.path)) continue;
+
+      if (it.path.indexOf('portfolio/') === 0){
+        manifest.portfolio.push(it.path);
+      } else if (it.path.indexOf('travels/') === 0){
+        var parts = it.path.split('/');
+        if (parts.length >= 3){
+          var folder = decodeURIComponent(parts[1]);
+          (manifest.travels[folder]||(manifest.travels[folder]=[])).push(it.path);
+        }
+      } else if (it.path.indexOf('profile/') === 0){
+        manifest.profile.push(it.path);
+      }
+    }
+    log('Built manifest:', manifest);
+    return manifest;
+  }
+
+  function loadManifest(){
+    var cached = cacheGet('manifest');
+    if (cached){
+      log('Using cached manifest');
+      return Promise.resolve(cached);
+    }
+
+    // DEV: always hit live GitHub API for fresh tree
+    if (DEV_MODE){
+      log('DEV_MODE: skipping baked manifest, fetching from GitHub API');
+      return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
+        .then(function(commit){
+          CURRENT_SHA = (commit && commit.sha) || (commit && commit.commit && commit.commit.tree && commit.commit.tree.sha) || null;
+          if (!commit || !commit.commit || !commit.commit.tree || !commit.commit.tree.sha) throw new Error('Missing tree SHA');
+          var sha = commit.commit.tree.sha;
+          log('Latest commit SHA:', CURRENT_SHA, 'Tree SHA:', sha);
+          return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+sha+'?recursive=1');
+        })
+        .then(buildManifestFromTree);
+    }
+
+    // PROD: try baked manifest first (versioned), then fallback to API
+    return fetch('/manifest.json?v='+encodeURIComponent(CACHE_VERSION), {cache:'no-store'})
+      .then(function(r){
+        if(r.ok) return r.json();
+        throw new Error('no baked manifest');
+      })
+      .catch(function(){
+        log('No baked manifest, falling back to GitHub API');
+        return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
+          .then(function(commit){
+            CURRENT_SHA = (commit && commit.sha) || null;
+            if (!commit || !commit.commit || !commit.commit.tree || !commit.commit.tree.sha) throw new Error('Missing tree SHA');
+            var sha = commit.commit.tree.sha;
+            return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+sha+'?recursive=1');
+          })
+          .then(buildManifestFromTree);
+      })
+      .then(function(manifest){
+        cacheSet('manifest', manifest);
+        return manifest;
+      });
+  }
+
+  /* -------- Data helpers -------- */
+  function listPortfolio(m){
+    return (m.portfolio||[]).map(function(p){
+      return { src:rawURL(p), alt:p.split('/').pop(), path:p, type:isVideo(p)?'video':'image' };
+    });
+  }
+  function listTravelAll(m){
+    var out=[], g=m.travels||{};
+    for (var folder in g){
+      if(!g.hasOwnProperty(folder)) continue;
+      for (var i=0;i<g[folder].length;i++){
+        var p=g[folder][i];
+        out.push({ src:rawURL(p), alt:p.split('/').pop(), path:p, folder:folder, type:isVideo(p)?'video':'image' });
+      }
+    }
+    return out;
+  }
+  function listAlbum(m, folder){
+    var arr=(m.travels&&m.travels[folder])?m.travels[folder]:[];
+    return arr.map(function(p){
+      return { src:rawURL(p), alt:p.split('/').pop(), path:p, type:isVideo(p)?'video':'image' };
+    });
+  }
+  function heroFromProfile(m){
+    var pics=(m.profile||[]).filter(isImg);
+    if(pics.length) return rawURL(pics[0]);
+    var any=(m.profile||[])[0];
+    return any?rawURL(any):'user.png';
+  }
+
+  /* -------- DOM helpers -------- */
+  function byId(id){ return document.getElementById(id); }
+  function clear(el){ while(el && el.firstChild) el.removeChild(el.firstChild); }
+
+  function mountGrid(elId, files, onClick){
+    var el=byId(elId); clear(el);
+    if(!files.length){
+      var p=document.createElement('p'); p.style.color='#9aa7bd'; p.appendChild(document.createTextNode('Nothing here yet.'));
+      el.appendChild(p); return;
+    }
+    var frag=document.createDocumentFragment();
+    for(var i=0;i<files.length;i++){
+      (function(f){
+        var fig=document.createElement('figure'); fig.className='shot';
+        if(f.type==='video'){
+          var v=makeVideo(f.src);
+          if(onClick){ fig.addEventListener('click', function(){ onClick(f); }); }
+          fig.appendChild(v);
+        }else{
+          var img=makeImgWithFallback(f.src, f.alt);
+          if(onClick){ img.addEventListener('click', function(){ onClick(f); }); }
+          fig.appendChild(img);
+        }
+        frag.appendChild(fig);
+      })(files[i]);
+    }
+    el.appendChild(frag);
+  }
+
+  function err(elId, msg){
+    var el=byId(elId); if(!el) return;
+    var chip=document.createElement('div');
+    chip.className='chip';
+    chip.style.borderColor='#ff8a8a'; chip.style.background='rgba(255,0,0,.12)'; chip.style.color='#ffdede';
+    chip.appendChild(document.createTextNode(msg));
+    clear(el); el.appendChild(chip);
+  }
+
+  /* -------- Router -------- */
+  var views={};
+  function initViews(){
+    views={
+      home:byId('view-home'),
+      portfolio:byId('view-portfolio'),
+      travels:byId('view-travels'),
+      album:byId('view-album')
+    };
+  }
+  function show(name){
+    for(var k in views){ if(views.hasOwnProperty(k) && views[k]) views[k].classList.add('hidden'); }
+    if (views[name]) views[name].classList.remove('hidden');
+    window.scrollTo(0,0);
+  }
+
+  function routeWith(m){
+    var h=(location.hash||'').replace(/^#/, '');
+    log('Route:', h);
+
+    if(h.indexOf('/portfolio')===0){
+      show('portfolio');
+      try{ mountGrid('portfolioGrid', listPortfolio(m), null); }
+      catch(e){ err('portfolioError', e.message); }
+      return;
+    }
+
+    if(h.indexOf('/travels')===0 && h.split('/').length<=2){
+      show('travels');
+      try{
+        var all=listTravelAll(m), groups={};
+        for(var i=0;i<all.length;i++){ var f=all[i]; (groups[f.folder]||(groups[f.folder]=[])).push(f); }
+        var wrap=byId('travelCards'); clear(wrap);
+        var frag=document.createDocumentFragment();
+        for(var folder in groups){
+          if(!groups.hasOwnProperty(folder)) continue;
+          var files=groups[folder];
+          var card=document.createElement('article'); card.className='place';
+          if(files[0].type==='video'){
+            card.appendChild(makeVideo(files[0].src));
+          }else{
+            var img=makeImgWithFallback(files[0].src, folder);
+            card.appendChild(img);
+          }
+          var ov=document.createElement('div'); ov.className='overlay';
+          var h4=document.createElement('h4'); h4.appendChild(document.createTextNode(folder.replace(/[-_]/g,' ')));
+          var p2=document.createElement('p'); p2.appendChild(document.createTextNode(files.length+' file'+(files.length>1?'s':'')));
+          var a=document.createElement('a'); a.className='chip'; a.href='#/travel/'+encodeURIComponent(folder); a.appendChild(document.createTextNode('View shots'));
+          ov.appendChild(h4); ov.appendChild(p2); ov.appendChild(a);
+          card.appendChild(ov);
+          frag.appendChild(card);
+        }
+        wrap.appendChild(frag);
+      }catch(e){ err('travelsError', e.message); }
+      return;
+    }
+
+    if(h.indexOf('/travel/')===0){
+      var parts=h.split('/'); var folder=decodeURIComponent(parts[2]||'').trim();
+      show('album'); byId('albumTitle').textContent=folder.replace(/[-_]/g,' ');
+      try{ mountGrid('albumGrid', listAlbum(m, folder), null); }
+      catch(e){ err('albumError', e.message); }
+      return;
+    }
+
+    // HOME
+    show('home');
+    try{
+      var P=listPortfolio(m).map(function(x){ return {kind:'portfolio',type:x.type,src:x.src,alt:x.alt}; });
+      var T=listTravelAll(m).map(function(x){ return {kind:'travel',folder:x.folder,type:x.type,src:x.src,alt:x.alt}; });
+      var all=P.concat(T);
+      for(var i=all.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=all[i]; all[i]=all[j]; all[j]=t; }
+      var pick=all.slice(0, Math.min(12, all.length));
+      mountGrid('streamGrid', pick, function(file){
+        if(file.kind==='portfolio'){ location.hash='#/portfolio'; }
+        else{ location.hash='#/travel/'+encodeURIComponent(file.folder); }
+      });
+    }catch(e){
+      var el=byId('streamGrid'); clear(el);
+      var d=document.createElement('div'); d.className='chip';
+      d.style.borderColor='#ff8a8a'; d.style.background='rgba(255,0,0,.12)'; d.style.color='#ffdede';
+      d.appendChild(document.createTextNode(e.message));
+      el.appendChild(d);
+    }
+  }
+
+  /* -------- Boot -------- */
+  function boot(){
+    initViews();
+    if (DEV_MODE){
+      // Optional: clear any stale keys for this app prefix
+      try{
+        var prefix = GH.owner+':'+GH.repo+':'+GH.ref+':';
+        for (var i=localStorage.length-1;i>=0;i--){
+          var k = localStorage.key(i);
+          if (k && k.indexOf(prefix) === 0){
+            localStorage.removeItem(k);
+          }
+        }
+        log('DEV_MODE: cleared localStorage keys with prefix', prefix);
+      }catch(e){}
+    }
+
+    loadManifest().then(function(m){
+      var hero = document.getElementById('heroImg');
+      if (hero) hero.src = heroFromProfile(m);
+      routeWith(m);
+      window.addEventListener('hashchange', function(){ routeWith(m); });
+    }).catch(function(e){
+      log('Boot error:', e);
+      err('portfolioError', e.message || String(e));
+      err('travelsError', e.message || String(e));
+      err('albumError', e.message || String(e));
+    });
+  }
+
+  // Start
+  boot();
+})();
+</script>

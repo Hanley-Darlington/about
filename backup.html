@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>William Darlington</title>
+
+  <!-- Favicon (root-relative so it works with hash routing) -->
+  <link rel="icon" href="/favicon/user.png" sizes="32x32" />
+  <link rel="shortcut icon" href="/favicon/user.png" />
+  <meta name="theme-color" content="#0b0e14" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#0b0e14; --muted:#94a3b8; --text:#e8eefc;
+      --brand:#7c3aed; --brand-2:#22d3ee; --ring:rgba(124,58,237,.4);
+      --shadow:0 14px 40px rgba(0,0,0,.5); --radius:20px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      color:var(--text); line-height:1.55;
+      background:
+        radial-gradient(1200px 500px at 120% -10%, rgba(34,211,238,.08), transparent 60%),
+        radial-gradient(1000px 500px at -20% 10%, rgba(124,58,237,.09), transparent 60%),
+        var(--bg);
+    }
+    img,video{display:block;max-width:100%}
+    a{color:inherit;text-decoration:none}
+    .container{width:min(1200px,92%);margin-inline:auto}
+
+    /* NAV */
+    header{
+      position:sticky;top:0;z-index:50;
+      background:rgba(15,21,36,.78);
+      backdrop-filter:saturate(150%) blur(12px);
+      border-bottom:1px solid rgba(255,255,255,.08);
+      cursor:pointer; /* whole bar = Home */
+    }
+    .nav{display:flex;justify-content:flex-end;align-items:center;padding:14px 28px;gap:12px}
+    .nav-links{display:flex;gap:12px;flex-wrap:wrap}
+    .chip{
+      padding:8px 12px;border-radius:999px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.08)
+    }
+    .pill{
+      padding:10px 16px;border-radius:14px;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      font-weight:700;color:#0a0a0a;box-shadow:0 8px 24px var(--ring)
+    }
+    /* allow links to be clickable even though header is */
+    header .nav{pointer-events:none}
+    header .nav a{pointer-events:auto}
+
+    /* Mobile nav tweaks */
+    @media (max-width:560px){
+      .nav{justify-content:center;padding:10px 14px}
+      .nav-links{gap:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+      .nav-links::-webkit-scrollbar{display:none}
+      .chip,.pill{padding:8px 12px;font-size:14px}
+    }
+
+    /* Sections + HERO */
+    section{padding:24px 0 52px}
+    .hero{display:grid;grid-template-columns:1fr 1fr;padding:64px 0;gap:32px;align-items:center}
+    @media(max-width:900px){.hero{grid-template-columns:1fr;text-align:center}}
+    .hero h1{font-size:clamp(32px,5vw,56px);font-weight:800;line-height:1.1;margin-bottom:10px}
+    .hero p{color:var(--muted)}
+    .hero-card{border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;justify-self:end;max-width:min(520px,90vw)}
+    @media(max-width:900px){.hero-card{justify-self:center}}
+    .hero-card img{width:100%;height:auto;object-fit:cover}
+
+    /* Views */
+    .hidden{display:none}
+    .view-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+    .view-head h2{font-size:clamp(24px,3vw,34px)}
+    .back{padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14)}
+
+    /* Base gallery tiles */
+    .gallery{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+      gap:18px
+    }
+    .shot{
+      border-radius:var(--radius);
+      overflow:hidden;
+      background:#111;
+      box-shadow:var(--shadow);
+      cursor:pointer
+    }
+
+    /* --- Fill behaviour to remove black bars on desktop --- */
+    /* Home stream + Portfolio: fill the tile (allows small crop) */
+    #streamGrid .shot, #portfolioGrid .shot { aspect-ratio:16/9; }
+    #streamGrid .shot img, #streamGrid .shot video,
+    #portfolioGrid .shot img, #portfolioGrid .shot video{
+      width:100%;height:100%;object-fit:cover;background:#000;
+    }
+
+    /* Album page: preserve originals (no crop) */
+    #albumGrid .shot{ aspect-ratio:auto; }
+    #albumGrid .shot img, #albumGrid .shot video{
+      width:100%;height:auto;object-fit:contain;background:#000;
+    }
+
+    .stream-grid{margin-top:12px}
+
+    /* Travel index cards (consistent 16:9 box, always fill) */
+    .travel-grid{
+      display:grid;gap:20px;
+      grid-template-columns:repeat(auto-fill,minmax(300px,1fr))
+    }
+    .place{
+      position:relative;border-radius:var(--radius);
+      overflow:hidden;box-shadow:var(--shadow);
+      aspect-ratio:16/9;background:#000
+    }
+    .place img,.place video{
+      width:100%;height:100%;object-fit:cover;display:block;background:#000
+    }
+    .place .overlay{
+      position:absolute;inset:0;
+      background:linear-gradient(to top,rgba(0,0,0,.65),rgba(0,0,0,.08) 60%);
+      display:flex;flex-direction:column;justify-content:flex-end;padding:20px
+    }
+    .place h4{margin:0 0 6px;font-size:18px}
+    .place p{margin:0 0 10px;font-size:14px;color:var(--muted)}
+    .place a{align-self:start}
+
+    /* Footer */
+    footer{padding:28px 0;border-top:1px solid rgba(255,255,255,.08)}
+    .footer-center{display:flex;flex-direction:column;align-items:center;gap:10px}
+    .social{display:flex;gap:10px}
+  </style>
+</head>
+<body>
+<header>
+  <div class="nav container">
+    <nav class="nav-links">
+      <a class="chip" href="#/portfolio">Portfolio</a>
+      <a class="chip" href="#/travels">Travel</a>
+      <a class="pill" href="https://hdbot.io" target="_blank" rel="noopener">ALGOs</a>
+      <a class="chip" href="mailto:hanley.darlington@gmail.com">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- HOME -->
+  <section id="view-home">
+    <div class="container">
+      <div class="hero">
+        <div>
+          <h1>William Darlington</h1>
+          <p>Vires in Numeris</p>
+        </div>
+        <div class="hero-card">
+          <img id="heroImg" src="user.png" alt="Profile">
+        </div>
+      </div>
+
+      <div class="gallery stream-grid" id="streamGrid">
+        <p style="color:#9aa7bd">Loading photos…</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PORTFOLIO -->
+  <section id="view-portfolio" class="hidden">
+    <div class="container">
+      <div class="view-head">
+        <h2>Portfolio</h2>
+        <a class="back" href="#/">← Home</a>
+      </div>
+      <div class="gallery" id="portfolioGrid"><p style="color:#9aa7bd">Loading…</p></div>
+      <div id="portfolioError"></div>
+    </div>
+  </section>
+
+  <!-- TRAVEL INDEX -->
+  <section id="view-travels" class="hidden">
+    <div class="container">
+      <div class="view-head">
+        <h2>Travel</h2>
+        <a class="back" href="#/">← Home</a>
+      </div>
+      <div class="travel-grid" id="travelCards"><p style="color:#9aa7bd">Loading…</p></div>
+      <div id="travelsError"></div>
+    </div>
+  </section>
+
+  <!-- SINGLE TRAVEL ALBUM -->
+  <section id="view-album" class="hidden">
+    <div class="container">
+      <div class="view-head">
+        <h2 id="albumTitle">Album</h2>
+        <a class="back" href="#/travels">← All trips</a>
+      </div>
+      <div class="gallery" id="albumGrid"><p style="color:#9aa7bd">Loading…</p></div>
+      <div id="albumError"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container footer-center">
+    <div class="social">
+      <a class="chip" href="https://www.linkedin.com/in/william-darlington-736475212/" target="_blank" rel="noopener">LinkedIn</a>
+      <a class="chip" href="https://instagram.com/wi11.4m" target="_blank" rel="noopener">Instagram</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  'use strict';
+
+  /* -------- Config -------- */
+  var GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
+  var IMG_EXT   = ['.jpg','.jpeg','.png','.webp','.gif','.avif'];
+  var VIDEO_EXT = ['.mp4','.webm'];
+  var CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
+  var CACHE_VERSION = 'v1.2';          // bump to invalidate local cache
+
+  // raw URL builder (no API for file bytes)
+  function rawURL(path){
+    return 'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path);
+  }
+
+  // Header (except links) goes Home
+  document.querySelector('header').addEventListener('click', function(e){
+    if (e.target.closest('a')) return;
+    location.hash = '#/';
+  });
+
+  /* -------- Utils -------- */
+  function hasExt(name, exts){
+    name = (name||'').toLowerCase();
+    for (var i=0;i<exts.length;i++){
+      var ext = exts[i];
+      if (name.indexOf(ext, name.length-ext.length) !== -1) return true;
+    }
+    return false;
+  }
+  function isImg(n){ return hasExt(n, IMG_EXT); }
+  function isVideo(n){ return hasExt(n, VIDEO_EXT); }
+  function isMedia(n){ return isImg(n) || isVideo(n); }
+
+  function cacheKey(k){ return GH.owner+':'+GH.repo+':'+GH.ref+':'+CACHE_VERSION+':'+k; }
+  function cacheGet(k){
+    try{
+      var raw = localStorage.getItem(cacheKey(k));
+      if(!raw) return null;
+      var obj = JSON.parse(raw);
+      if(Date.now() - obj.t > CACHE_TTL) return null;
+      return obj.data;
+    }catch(e){ return null; }
+  }
+  function cacheSet(k,v){ try{ localStorage.setItem(cacheKey(k), JSON.stringify({t:Date.now(), data:v})); }catch(e){} }
+
+  function fetchJSON(url){
+    return fetch(url, {headers:{'Accept':'application/vnd.github+json'}}).then(function(r){
+      if(!r.ok){
+        return r.json().catch(function(){return {message:''};}).then(function(j){
+          throw new Error('HTTP '+r.status+' '+(j.message||''));
+        });
+      }
+      return r.json();
+    });
+  }
+
+  /* -------- Manifest loading (max 2 API calls) -------- */
+  function buildManifestFromTree(tree){
+    var files = tree && tree.tree ? tree.tree : [];
+    var manifest = { portfolio:[], travels:{}, profile:[] };
+    for (var i=0;i<files.length;i++){
+      var it = files[i];
+      if (it.type !== 'blob') continue;
+      if (!isMedia(it.path)) continue;
+
+      if (it.path.indexOf('portfolio/') === 0){
+        manifest.portfolio.push(it.path);
+      } else if (it.path.indexOf('travels/') === 0){
+        var parts = it.path.split('/');
+        if (parts.length >= 3){
+          var folder = decodeURIComponent(parts[1]);
+          (manifest.travels[folder]||(manifest.travels[folder]=[])).push(it.path);
+        }
+      } else if (it.path.indexOf('profile/') === 0){
+        manifest.profile.push(it.path);
+      }
+    }
+    return manifest;
+  }
+
+  function loadManifest(){
+    var cached = cacheGet('manifest');
+    if (cached) return Promise.resolve(cached);
+
+    // Try baked manifest first (optional)
+    return fetch('/manifest.json', {cache:'no-store'})
+      .then(function(r){ if(r.ok) return r.json(); throw new Error('no baked manifest'); })
+      .catch(function(){
+        // Fallback to GitHub API: commits -> tree
+        return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
+          .then(function(commit){
+            var sha = commit && commit.commit && commit.commit.tree && commit.commit.tree.sha;
+            if (!sha) throw new Error('Missing tree SHA');
+            return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+sha+'?recursive=1');
+          })
+          .then(buildManifestFromTree);
+      })
+      .then(function(manifest){ cacheSet('manifest', manifest); return manifest; });
+  }
+
+  /* -------- Data helpers -------- */
+  function listPortfolio(m){
+    return (m.portfolio||[]).map(function(p){
+      return { src:rawURL(p), alt:p.split('/').pop(), path:p, type:isVideo(p)?'video':'image' };
+    });
+  }
+  function listTravelAll(m){
+    var out=[], g=m.travels||{};
+    for (var folder in g){
+      if(!g.hasOwnProperty(folder)) continue;
+      for (var i=0;i<g[folder].length;i++){
+        var p=g[folder][i];
+        out.push({ src:rawURL(p), alt:p.split('/').pop(), path:p, folder:folder, type:isVideo(p)?'video':'image' });
+      }
+    }
+    return out;
+  }
+  function listAlbum(m, folder){
+    var arr=(m.travels&&m.travels[folder])?m.travels[folder]:[];
+    return arr.map(function(p){
+      return { src:rawURL(p), alt:p.split('/').pop(), path:p, type:isVideo(p)?'video':'image' };
+    });
+  }
+  function heroFromProfile(m){
+    var pics=(m.profile||[]).filter(isImg);
+    if(pics.length) return rawURL(pics[0]);
+    var any=(m.profile||[])[0];
+    return any?rawURL(any):'user.png';
+  }
+
+  /* -------- DOM helpers -------- */
+  function byId(id){ return document.getElementById(id); }
+  function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
+
+  function makeVideo(src){
+    var v=document.createElement('video');
+    v.src=src; v.muted=true; v.loop=true; v.autoplay=true;
+    v.playsInline=true; v.preload='metadata'; v.controls=false;
+    return v;
+  }
+
+  function mountGrid(elId, files, onClick){
+    var el=byId(elId); clear(el);
+    if(!files.length){
+      var p=document.createElement('p'); p.style.color='#9aa7bd'; p.appendChild(document.createTextNode('Nothing here yet.'));
+      el.appendChild(p); return;
+    }
+    var frag=document.createDocumentFragment();
+    for(var i=0;i<files.length;i++){
+      (function(f){
+        var fig=document.createElement('figure'); fig.className='shot';
+        if(f.type==='video'){
+          var v=makeVideo(f.src);
+          if(onClick){ fig.addEventListener('click', function(){ onClick(f); }); }
+          fig.appendChild(v);
+        }else{
+          var img=new Image(); img.src=f.src; img.alt=f.alt; img.loading='lazy'; img.decoding='async';
+          if(onClick){ img.addEventListener('click', function(){ onClick(f); }); }
+          fig.appendChild(img);
+        }
+        frag.appendChild(fig);
+      })(files[i]);
+    }
+    el.appendChild(frag);
+  }
+
+  function err(elId, msg){
+    var el=byId(elId); if(!el) return;
+    var chip=document.createElement('div');
+    chip.className='chip';
+    chip.style.borderColor='#ff8a8a'; chip.style.background='rgba(255,0,0,.12)'; chip.style.color='#ffdede';
+    chip.appendChild(document.createTextNode(msg));
+    clear(el); el.appendChild(chip);
+  }
+
+  /* -------- Router -------- */
+  var views={
+    home:byId('view-home'),
+    portfolio:byId('view-portfolio'),
+    travels:byId('view-travels'),
+    album:byId('view-album')
+  };
+  function show(name){
+    for(var k in views){ if(views.hasOwnProperty(k)) views[k].classList.add('hidden'); }
+    views[name].classList.remove('hidden');
+    window.scrollTo(0,0);
+  }
+
+  function routeWith(m){
+    var h=(location.hash||'').replace(/^#/, '');
+
+    if(h.indexOf('/portfolio')===0){
+      show('portfolio');
+      try{ mountGrid('portfolioGrid', listPortfolio(m), null); }
+      catch(e){ err('portfolioError', e.message); }
+      return;
+    }
+
+    if(h.indexOf('/travels')===0){
+      show('travels');
+      try{
+        var all=listTravelAll(m), groups={};
+        for(var i=0;i<all.length;i++){ var f=all[i]; (groups[f.folder]||(groups[f.folder]=[])).push(f); }
+        var wrap=byId('travelCards'); clear(wrap);
+        var frag=document.createDocumentFragment();
+        for(var folder in groups){
+          if(!groups.hasOwnProperty(folder)) continue;
+          var files=groups[folder];
+          var card=document.createElement('article'); card.className='place';
+          if(files[0].type==='video'){
+            card.appendChild(makeVideo(files[0].src));
+          }else{
+            var img=new Image(); img.src=files[0].src; img.alt=folder; img.loading='lazy';
+            card.appendChild(img);
+          }
+          var ov=document.createElement('div'); ov.className='overlay';
+          var h4=document.createElement('h4'); h4.appendChild(document.createTextNode(folder.replace(/[-_]/g,' ')));
+          var p2=document.createElement('p'); p2.appendChild(document.createTextNode(files.length+' file'+(files.length>1?'s':'')));
+          var a=document.createElement('a'); a.className='chip'; a.href='#/travel/'+encodeURIComponent(folder); a.appendChild(document.createTextNode('View shots'));
+          ov.appendChild(h4); ov.appendChild(p2); ov.appendChild(a);
+          card.appendChild(ov);
+          frag.appendChild(card);
+        }
+        wrap.appendChild(frag);
+      }catch(e){ err('travelsError', e.message); }
+      return;
+    }
+
+    if(h.indexOf('/travel/')===0){
+      var parts=h.split('/'); var folder=decodeURIComponent(parts[2]||'').trim();
+      show('album'); byId('albumTitle').textContent=folder.replace(/[-_]/g,' ');
+      try{ mountGrid('albumGrid', listAlbum(m, folder), null); }
+      catch(e){ err('albumError', e.message); }
+      return;
+    }
+
+    // HOME
+    show('home');
+    try{
+      var P=listPortfolio(m).map(function(x){ return {kind:'portfolio',type:x.type,src:x.src,alt:x.alt}; });
+      var T=listTravelAll(m).map(function(x){ return {kind:'travel',folder:x.folder,type:x.type,src:x.src,alt:x.alt}; });
+      var all=P.concat(T);
+      for(var i=all.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=all[i]; all[i]=all[j]; all[j]=t; }
+      var pick=all.slice(0, Math.min(12, all.length));
+      mountGrid('streamGrid', pick, function(file){
+        if(file.kind==='portfolio'){ location.hash='#/portfolio'; }
+        else{ location.hash='#/travel/'+encodeURIComponent(file.folder); }
+      });
+    }catch(e){
+      var el=byId('streamGrid'); clear(el);
+      var d=document.createElement('div'); d.className='chip';
+      d.style.borderColor='#ff8a8a'; d.style.background='rgba(255,0,0,.12)'; d.style.color='#ffdede';
+      d.appendChild(document.createTextNode(e.message));
+      el.appendChild(d);
+    }
+  }
+
+  function boot(){
+    loadManifest().then(function(m){
+      byId('heroImg').src = heroFromProfile(m);
+      routeWith(m);
+      window.addEventListener('hashchange', function(){ routeWith(m); });
+    }).catch(function(e){
+      err('portfolioError', e.message);
+      err('travelsError', e.message);
+      err('albumError', e.message);
+    });
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
