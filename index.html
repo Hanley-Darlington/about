@@ -1,218 +1,217 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>William Darlington — Portfolio & Travels</title>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #0b0e14;
-    --muted: #94a3b8;
-    --text: #e8eefc;
-    --brand: #7c3aed;
-    --brand-2: #22d3ee;
-    --ring: rgba(124,58,237,.4);
-    --shadow: 0 14px 40px rgba(0,0,0,.5);
-    --radius: 20px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: Inter, system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    line-height: 1.55;
-  }
-  img { max-width: 100%; display: block; }
-  a { color: inherit; text-decoration: none; }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>William Darlington — Portfolio & Travels</title>
 
-  /* NAV */
-  header {
-    position: sticky; top: 0; z-index: 50;
-    backdrop-filter: saturate(150%) blur(12px);
-    background: rgba(15,21,36,.75);
-    border-bottom: 1px solid rgba(255,255,255,.08);
-  }
-  .nav {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 14px 28px;
-  }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; }
-  .logo {
-    width: 34px; height: 34px; border-radius: 12px;
-    background: conic-gradient(from 220deg, var(--brand), var(--brand-2), var(--brand));
-    box-shadow: 0 6px 20px var(--ring);
-  }
-  .nav-links { display: flex; gap: 12px; }
-  .chip {
-    padding: 8px 12px; border-radius: 999px;
-    background: rgba(255,255,255,.06);
-    border: 1px solid rgba(255,255,255,.08);
-  }
-  .pill {
-    padding: 10px 16px; border-radius: 14px;
-    background: linear-gradient(135deg, var(--brand), var(--brand-2));
-    font-weight: 700; color: #0a0a0a;
-    box-shadow: 0 8px 24px var(--ring);
-  }
+  <!-- Favicon / Avatar -->
+  <link rel="icon" type="image/png" href="favicon/encryption.png" />
+  <link rel="apple-touch-icon" href="favicon/encryption.png" />
 
-  /* HERO */
-  .hero {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 64px 28px;
-    align-items: center;
-    gap: 32px;
-  }
-  @media(max-width: 900px){ .hero { grid-template-columns: 1fr; text-align: center; } }
-  .hero h1 { font-size: clamp(32px, 5vw, 56px); font-weight: 800; line-height: 1.1; margin-bottom: 18px; }
-  .hero p { color: var(--muted); margin-bottom: 22px; }
-  .cta { display: flex; gap: 12px; flex-wrap: wrap; }
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-  .hero-card {
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    overflow: hidden;
-  }
-  .hero-card img { width: 100%; height: auto; object-fit: cover; display: block; }
+  <style>
+    :root{
+      --bg:#0b0e14; --muted:#94a3b8; --text:#e8eefc;
+      --brand:#7c3aed; --brand-2:#22d3ee; --ring:rgba(124,58,237,.4);
+      --shadow:0 14px 40px rgba(0,0,0,.5); --radius:20px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.55}
+    img{max-width:100%;display:block}
+    a{color:inherit;text-decoration:none}
 
-  /* SECTION */
-  section { padding: 60px 28px; }
-  .section-head { margin-bottom: 20px; }
-  .section-head h2 { font-size: clamp(24px, 3vw, 34px); margin-bottom: 8px; }
+    /* NAV (glass/iOS) */
+    header{position:sticky;top:0;z-index:50;background:rgba(15,21,36,.78);backdrop-filter:saturate(150%) blur(12px);border-bottom:1px solid rgba(255,255,255,.08)}
+    .nav{display:flex;justify-content:space-between;align-items:center;padding:14px 28px}
+    .brand{display:flex;align-items:center;gap:12px;font-weight:800}
+    .brand img{width:36px;height:36px;border-radius:12px;object-fit:cover;box-shadow:0 6px 20px var(--ring)}
+    .nav-links{display:flex;gap:12px;flex-wrap:wrap}
+    .chip{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)}
+    .pill{padding:10px 16px;border-radius:14px;background:linear-gradient(135deg,var(--brand),var(--brand-2));font-weight:700;color:#0a0a0a;box-shadow:0 8px 24px var(--ring)}
 
-  /* PORTFOLIO GRID */
-  .gallery {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
-  }
-  .shot {
-    border-radius: var(--radius);
-    overflow: hidden;
-    background: #111;
-    box-shadow: var(--shadow);
-  }
-  .shot img { width: 100%; height: auto; display: block; }
+    /* HERO (left-anchored, full width) */
+    .hero{display:grid;grid-template-columns:1fr 1fr;padding:64px 28px;gap:32px;align-items:center}
+    @media(max-width:900px){.hero{grid-template-columns:1fr;text-align:center}}
+    .hero h1{font-size:clamp(32px,5vw,56px);font-weight:800;line-height:1.1;margin-bottom:18px}
+    .hero p{color:var(--muted);margin-bottom:22px}
+    .cta{display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-start}
+    @media(max-width:900px){.cta{justify-content:center}}
+    .hero-card{border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .hero-card img{width:100%;height:auto;object-fit:cover}
 
-  /* TRAVEL CARDS */
-  .travel-grid {
-    display: grid;
-    gap: 20px;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  }
-  .place {
-    position: relative;
-    border-radius: var(--radius);
-    overflow: hidden;
-    box-shadow: var(--shadow);
-  }
-  .place img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-  .place .overlay {
-    position: absolute; inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,.65), rgba(0,0,0,.05) 60%);
-    display: flex; flex-direction: column;
-    justify-content: flex-end;
-    padding: 20px;
-  }
-  .place h4 { margin: 0 0 6px; font-size: 18px; }
-  .place p { margin: 0 0 10px; font-size: 14px; color: var(--muted); }
-  .place a { align-self: start; }
+    /* Sections (edge-to-edge) */
+    section{padding:60px 28px}
+    .section-head{margin-bottom:20px}
+    .section-head h2{font-size:clamp(24px,3vw,34px);margin-bottom:8px}
+    .lead{color:var(--muted)}
 
-  footer {
-    padding: 32px; text-align: center; color: var(--muted);
-    border-top: 1px solid rgba(255,255,255,.08);
-  }
-</style>
+    /* Portfolio grid */
+    .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+    .shot{border-radius:var(--radius);overflow:hidden;background:#111;box-shadow:var(--shadow);cursor:pointer}
+
+    /* Travel cards (banner fix: full-bleed + overlay) */
+    .travel-grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+    .place{position:relative;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+    .place img{width:100%;height:100%;object-fit:cover;filter:saturate(1.05) contrast(1.02)}
+    .place .overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.65),rgba(0,0,0,.08) 60%);display:flex;flex-direction:column;justify-content:flex-end;padding:20px}
+    .place h4{margin:0 0 6px;font-size:18px}
+    .place p{margin:0 0 10px;font-size:14px;color:var(--muted)}
+    .place a{align-self:start}
+
+    footer{padding:32px;text-align:center;color:var(--muted);border-top:1px solid rgba(255,255,255,.08)}
+    .empty{color:var(--muted);opacity:.8}
+  </style>
 </head>
 <body>
-<header>
-  <div class="nav">
-    <a href="#top" class="brand"><span class="logo"></span> William Darlington</a>
-    <nav class="nav-links">
-      <a class="chip" href="#portfolio">Portfolio</a>
-      <a class="chip" href="#travels">Travels</a>
-      <a class="pill" href="#contact">Contact</a>
-    </nav>
-  </div>
-</header>
+  <header>
+    <div class="nav">
+      <a href="#top" class="brand">
+        <img src="user.png" alt="William Darlington" />
+        William Darlington
+      </a>
+      <nav class="nav-links">
+        <a class="chip" href="#portfolio">Portfolio</a>
+        <a class="chip" href="#travels">Travels</a>
+        <a class="pill" href="#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
 
-<main>
-  <!-- HERO -->
-  <section class="hero" id="top">
-    <div>
-      <h1>Building clean products and collecting messy stories.</h1>
-      <p>Welcome to my corner of the internet. Jump into the portfolio stream below, or browse trips by destination.</p>
-      <div class="cta">
-        <a class="pill" href="#portfolio">View portfolio</a>
-        <a class="chip" href="#travels">See travels</a>
+  <main>
+    <!-- HERO -->
+    <section class="hero" id="top">
+      <div>
+        <h1>Building clean products and collecting messy stories.</h1>
+        <p>Welcome to my corner of the internet. Jump into the portfolio stream below, or browse trips by destination.</p>
+        <div class="cta">
+          <a class="pill" href="#portfolio">View portfolio</a>
+          <a class="chip" href="#travels">See travels</a>
+        </div>
       </div>
-    </div>
-    <div class="hero-card">
-      <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1600&auto=format&fit=crop" alt="Workspace" />
-    </div>
-  </section>
+      <div class="hero-card">
+        <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1600&auto=format&fit=crop" alt="Workspace">
+      </div>
+    </section>
 
-  <!-- PORTFOLIO -->
-  <section id="portfolio">
-    <div class="section-head">
-      <h2>Portfolio</h2>
-      <p>Photos from <code>/portfolio/</code></p>
-    </div>
-    <div class="gallery" id="gallery"></div>
-  </section>
+    <!-- PORTFOLIO -->
+    <section id="portfolio">
+      <div class="section-head">
+        <h2>Portfolio</h2>
+        <p class="lead">Photos from <code>/portfolio/</code></p>
+      </div>
+      <div class="gallery" id="gallery"><p class="empty">Loading photos…</p></div>
+    </section>
 
-  <!-- TRAVELS -->
-  <section id="travels">
-    <div class="section-head">
-      <h2>Travels</h2>
-      <p>Images from <code>/travels/</code></p>
-    </div>
-    <div class="travel-grid" id="travelGallery"></div>
-  </section>
-</main>
+    <!-- TRAVELS -->
+    <section id="travels">
+      <div class="section-head">
+        <h2>Travels</h2>
+        <p class="lead">Images from <code>/travels/</code> (any subfolders)</p>
+      </div>
+      <div class="travel-grid" id="travelGallery"><p class="empty">Loading trips…</p></div>
+    </section>
+  </main>
 
-<footer>
-  © <span id="y"></span> William Darlington · Built for GitHub Pages
-</footer>
+  <footer>© <span id="y"></span> William Darlington · Built for GitHub Pages</footer>
 
-<script>
-  document.getElementById('y').textContent = new Date().getFullYear();
+  <script>
+    // Footer year
+    document.getElementById('y').textContent = new Date().getFullYear();
 
-  // Files (manual list or generated server-side)
-  const PORTFOLIO = ["alps-1.jpg","tokyo-1.jpg","california-1.jpg"];
-  const TRAVELS = ["paris-1.jpg","tokyo-1.jpg","california-1.jpg"];
+    // -------- Auto-load from GitHub --------
+    const GH = { owner: "Hanley-Darlington", repo: "about", ref: "main" }; // update if branch changes
+    const IMG_EXT = [".jpg",".jpeg",".png",".webp",".gif",".avif"];
+    const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-  const gallery = document.getElementById('gallery');
-  PORTFOLIO.forEach(f=>{
-    let fig = document.createElement('figure');
-    fig.className="shot";
-    let img = new Image();
-    img.src = "./portfolio/"+f;
-    img.alt = f;
-    fig.appendChild(img);
-    gallery.appendChild(fig);
-  });
+    async function gh(path){
+      const url = `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(GH.ref)}`;
+      const r = await fetch(url, { headers: { "Accept":"application/vnd.github+json" } });
+      if(!r.ok) throw new Error(`GitHub ${r.status}: ${path}`);
+      return r.json();
+    }
 
-  const travelGallery = document.getElementById('travelGallery');
-  TRAVELS.forEach(f=>{
-    let card = document.createElement('article');
-    card.className="place";
-    let img = new Image();
-    img.src = "./travels/"+f;
-    card.appendChild(img);
-    let overlay = document.createElement('div');
-    overlay.className="overlay";
-    overlay.innerHTML = `<h4>${f.split('-')[0]}</h4><p>Sample caption</p><a href="#portfolio" class="chip">View shots</a>`;
-    card.appendChild(overlay);
-    travelGallery.appendChild(card);
-  });
-</script>
+    function cacheGet(key){
+      try{ const raw = localStorage.getItem(key); if(!raw) return null;
+           const {t,data} = JSON.parse(raw); return (Date.now()-t<CACHE_TTL)?data:null; } catch{ return null; }
+    }
+    function cacheSet(key,data){ localStorage.setItem(key, JSON.stringify({t:Date.now(), data})); }
+
+    async function listPortfolio(){
+      try{
+        const files = await gh("portfolio");
+        return files
+          .filter(f => f.type==="file" && IMG_EXT.some(ext => f.name.toLowerCase().endsWith(ext)))
+          .map(f => ({ src: f.download_url, alt: f.name }));
+      }catch{ return []; }
+    }
+
+    async function listTravelsRecursive(dir="travels"){
+      let out = [];
+      try{
+        const items = await gh(dir);
+        for(const it of items){
+          if(it.type==="file" && IMG_EXT.some(ext => it.name.toLowerCase().endsWith(ext))){
+            out.push({ src: it.download_url, alt: it.name });
+          }else if(it.type==="dir"){
+            out = out.concat(await listTravelsRecursive(it.path));
+          }
+        }
+      }catch{ /* base folder may not exist yet */ }
+      return out;
+    }
+
+    function renderPortfolio(list){
+      const el = document.getElementById("gallery");
+      el.innerHTML = "";
+      if(!list.length){ el.innerHTML = `<p class="empty">No photos found in <code>/portfolio/</code>.</p>`; return; }
+      for(const f of list){
+        const fig = document.createElement("figure");
+        fig.className = "shot";
+        const img = new Image(); img.src = f.src; img.alt = f.alt; img.loading = "lazy";
+        fig.appendChild(img); el.appendChild(fig);
+      }
+    }
+
+    function renderTravels(list){
+      const el = document.getElementById("travelGallery");
+      el.innerHTML = "";
+      if(!list.length){ el.innerHTML = `<p class="empty">No travel images found in <code>/travels/</code>.</p>`; return; }
+      // Group by immediate folder name under /travels/
+      const groups = {};
+      for(const f of list){
+        const m = f.src.match(/\/travels\/([^\/]+)\//);
+        const key = m ? decodeURIComponent(m[1]) : "travel";
+        (groups[key] ||= []).push(f);
+      }
+      Object.entries(groups).forEach(([folder, files])=>{
+        const hero = files[0]; // use first image for banner
+        const card = document.createElement("article");
+        card.className = "place";
+        card.innerHTML = `
+          <img src="${hero.src}" alt="${folder}" loading="lazy">
+          <div class="overlay">
+            <h4>${folder.replace(/[-_]/g," ")}</h4>
+            <p>${files.length} photo${files.length>1?"s":""}</p>
+            <a href="#portfolio" class="chip">View shots</a>
+          </div>`;
+        el.appendChild(card);
+      });
+    }
+
+    async function loadAll(){
+      const pKey="cache_portfolio", tKey="cache_travels";
+      let p = cacheGet(pKey), t = cacheGet(tKey);
+      if(!p){ p = await listPortfolio(); cacheSet(pKey,p); }
+      if(!t){ t = await listTravelsRecursive(); cacheSet(tKey,t); }
+      renderPortfolio(p);
+      renderTravels(t);
+    }
+
+    loadAll();
+  </script>
 </body>
 </html>
