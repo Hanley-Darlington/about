@@ -81,14 +81,14 @@
     }
     .shot{
       border-radius:var(--radius);
-      overflow:hidden; /* for rounded corners */
+      overflow:hidden;
       background:#111;
       box-shadow:var(--shadow);
       cursor:pointer
     }
-    .shot img{width:100%;height:auto}               /* images = no crop */
+    .shot img{width:100%;height:auto}
     .shot.video video{
-      width:100%;height:auto;object-fit:contain;    /* videos = never crop */
+      width:100%;height:auto;object-fit:contain;
       background:#000
     }
     .stream-grid{margin-top:12px}
@@ -101,14 +101,14 @@
     .place{
       position:relative;border-radius:var(--radius);
       overflow:hidden;box-shadow:var(--shadow);
-      aspect-ratio:16/9;                             /* consistent card height */
+      aspect-ratio:16/9;
       background:#000
     }
     .place img{
-      width:100%;height:100%;object-fit:cover        /* photos = hero look */
+      width:100%;height:100%;object-fit:cover  /* photos = hero look */
     }
     .place.video video{
-      width:100%;height:100%;object-fit:contain      /* videos = no crop */
+      width:100%;height:100%;object-fit:contain /* videos = no crop */
     }
     .place .overlay{
       position:absolute;inset:0;
@@ -207,23 +207,32 @@
 (function(){
   'use strict';
 
-  /* ---------------- Config ---------------- */
+  /* -------- Config -------- */
   var GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
   var IMG_EXT   = ['.jpg','.jpeg','.png','.webp','.gif','.avif'];
   var VIDEO_EXT = ['.mp4','.webm'];
-  var TTL = 5*60*1000;
+  var CACHE_TTL = 24 * 60 * 60 * 1000;     // 24h
+  var CACHE_VERSION = 'v1.1';              // bump to invalidate local cache
 
-  // whole header (except the links) = Home
+  // root-relative raw URL builder (no API for downloads)
+  function rawURL(path){
+    return 'https://raw.githubusercontent.com/'
+      + GH.owner + '/' + GH.repo + '/' + GH.ref + '/'
+      + encodeURI(path);
+  }
+
+  // Make header (except links) go Home
   document.querySelector('header').addEventListener('click', function(e){
     if (e.target.closest('a')) return;
     location.hash = '#/';
   });
 
+  /* -------- Small utils -------- */
   function hasExt(name, exts){
     name = (name||'').toLowerCase();
     for (var i=0;i<exts.length;i++){
       var ext = exts[i];
-      if (name.indexOf(ext, name.length-ext.length) !== -1) return true;
+      if (name.indexOf(ext, name.length - ext.length) !== -1) return true;
     }
     return false;
   }
@@ -231,90 +240,122 @@
   function isVideo(n){ return hasExt(n, VIDEO_EXT); }
   function isMedia(n){ return isImg(n) || isVideo(n); }
 
+  function cacheKey(k){ return GH.owner+':'+GH.repo+':'+GH.ref+':'+CACHE_VERSION+':'+k; }
   function cacheGet(k){
     try{
-      var raw = localStorage.getItem(k);
+      var raw = localStorage.getItem(cacheKey(k));
       if(!raw) return null;
       var obj = JSON.parse(raw);
-      if(Date.now() - obj.t > TTL) return null;
+      if(Date.now() - obj.t > CACHE_TTL) return null;
       return obj.data;
     }catch(e){ return null; }
   }
-  function cacheSet(k,v){ try{ localStorage.setItem(k, JSON.stringify({t:Date.now(), data:v})); }catch(e){} }
+  function cacheSet(k,v){ try{ localStorage.setItem(cacheKey(k), JSON.stringify({t:Date.now(), data:v})); }catch(e){} }
 
-  function gh(path){
-    var url = 'https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/contents/'+encodeURIComponent(path)+'?ref='+encodeURIComponent(GH.ref);
+  function fetchJSON(url){
     return fetch(url, {headers:{'Accept':'application/vnd.github+json'}}).then(function(r){
       if(!r.ok){
         return r.json().catch(function(){return {message:''};}).then(function(j){
-          throw new Error('GitHub '+r.status+' '+path+' '+(j.message||''));
+          var msg = (j && j.message) ? j.message : '';
+          throw new Error('HTTP '+r.status+' '+msg);
         });
       }
       return r.json();
     });
   }
 
-  function listDirMedia(dir){
-    return gh(dir).then(function(items){
-      var out = [];
-      for(var i=0;i<items.length;i++){
-        var it = items[i];
-        if(it.type === 'file' && isMedia(it.name)){
-          out.push({
-            src: it.download_url,
-            alt: it.name,
-            path: it.path,
-            type: isVideo(it.name) ? 'video' : 'image'
-          });
+  /* -------- Manifest loading (0–2 API calls total) --------
+     1) Try optional /manifest.json (no API)
+     2) Else: GET /commits/:ref  -> get tree SHA
+              GET /git/trees/:sha?recursive=1 -> full file list
+     Build a manifest of media paths from the tree.
+  --------------------------------------------------------- */
+  function buildManifestFromTree(tree){
+    // tree.tree is an array of { path, type, mode, sha, size, url }
+    var files = tree && tree.tree ? tree.tree : [];
+    var manifest = { portfolio:[], travels:{}, profile:[] };
+
+    for (var i=0;i<files.length;i++){
+      var it = files[i];
+      if (it.type !== 'blob') continue;            // skip dirs
+      if (!isMedia(it.path)) continue;             // only images/videos
+
+      if (it.path.indexOf('portfolio/') === 0){
+        manifest.portfolio.push(it.path);
+      } else if (it.path.indexOf('travels/') === 0){
+        var parts = it.path.split('/');
+        if (parts.length >= 3){
+          var folder = decodeURIComponent(parts[1]);
+          (manifest.travels[folder] || (manifest.travels[folder]=[])).push(it.path);
         }
+      } else if (it.path.indexOf('profile/') === 0){
+        manifest.profile.push(it.path);
       }
-      return out;
-    }).catch(function(){ return []; });
-  }
-
-  function listPortfolio(){
-    var k='p_cache'; var d=cacheGet(k); if(d) return Promise.resolve(d);
-    return listDirMedia('portfolio').then(function(v){ cacheSet(k,v); return v; });
-  }
-
-  function listTravelAll(){
-    var k='t_cache'; var d=cacheGet(k); if(d) return Promise.resolve(d);
-    var out=[];
-    function rec(dir){
-      return gh(dir).then(function(items){
-        var chain = Promise.resolve();
-        for(var i=0;i<items.length;i++){
-          (function(it){
-            if(it.type==='file' && isMedia(it.name)){
-              out.push({
-                src: it.download_url,
-                alt: it.name,
-                path: it.path,
-                type: isVideo(it.name) ? 'video' : 'image'
-              });
-            }else if(it.type==='dir'){
-              chain = chain.then(function(){ return rec(it.path); });
-            }
-          })(items[i]);
-        }
-        return chain;
-      }).catch(function(){});
     }
-    return rec('travels').then(function(){ cacheSet(k,out); return out; });
+    return manifest;
   }
 
-  function listAlbum(folder){
-    return listDirMedia('travels/'+folder);
+  function loadManifest(){
+    var cached = cacheGet('manifest');
+    if (cached) return Promise.resolve(cached);
+
+    // (1) try baked /manifest.json if present
+    return fetch('/manifest.json', {cache:'no-store'}).then(function(r){
+      if (r.ok) return r.json();
+      throw new Error('no baked manifest');
+    }).catch(function(){
+      // (2) fallback to GitHub API: 2 calls total
+      return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
+        .then(function(commit){
+          var treeSha = commit && commit.commit && commit.commit.tree && commit.commit.tree.sha;
+          if (!treeSha) throw new Error('Missing tree SHA');
+          return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+treeSha+'?recursive=1');
+        })
+        .then(function(tree){
+          return buildManifestFromTree(tree);
+        });
+    }).then(function(manifest){
+      cacheSet('manifest', manifest);
+      return manifest;
+    });
   }
 
-  function heroFromProfile(){
-    return listDirMedia('profile').then(function(pics){
-      for (var i=0;i<pics.length;i++) if (pics[i].type==='image') return pics[i].src;
-      return (pics[0] && pics[0].src) || 'user.png';
-    }).catch(function(){ return 'user.png'; });
+  /* -------- Data helpers (from manifest) -------- */
+  function listPortfolio(manifest){
+    return (manifest.portfolio || []).map(function(p){
+      return { src: rawURL(p), alt: p.split('/').pop(), path:p, type: isVideo(p) ? 'video' : 'image' };
+    });
   }
 
-  /* ---------------- DOM helpers ---------------- */
+  function listTravelAll(manifest){
+    var out = [];
+    var groups = manifest.travels || {};
+    for (var folder in groups){
+      if(!groups.hasOwnProperty(folder)) continue;
+      var arr = groups[folder];
+      for (var i=0;i<arr.length;i++){
+        var p = arr[i];
+        out.push({ src: rawURL(p), alt: p.split('/').pop(), path:p, folder:folder, type: isVideo(p) ? 'video' : 'image' });
+      }
+    }
+    return out;
+  }
+
+  function listAlbum(manifest, folder){
+    var arr = (manifest.travels && manifest.travels[folder]) ? manifest.travels[folder] : [];
+    return arr.map(function(p){
+      return { src: rawURL(p), alt: p.split('/').pop(), path:p, type: isVideo(p) ? 'video' : 'image' };
+    });
+  }
+
+  function heroFromProfile(manifest){
+    var pics = (manifest.profile || []).filter(function(p){ return isImg(p); });
+    if (pics.length) return rawURL(pics[0]);
+    var any = (manifest.profile || [])[0];
+    return any ? rawURL(any) : 'user.png';
+  }
+
+  /* -------- DOM helpers -------- */
   function byId(id){ return document.getElementById(id); }
   function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
 
@@ -336,6 +377,7 @@
       var p = document.createElement('p'); p.style.color='#9aa7bd'; p.appendChild(document.createTextNode('Nothing here yet.'));
       el.appendChild(p); return;
     }
+    var frag = document.createDocumentFragment();
     for(var i=0;i<files.length;i++){
       (function(f){
         var fig = document.createElement('figure'); fig.className='shot';
@@ -349,9 +391,10 @@
           if(onClick){ img.addEventListener('click', function(){ onClick(f); }); }
           fig.appendChild(img);
         }
-        el.appendChild(fig);
+        frag.appendChild(fig);
       })(files[i]);
     }
+    el.appendChild(frag);
   }
 
   function err(elId, msg){
@@ -363,7 +406,7 @@
     clear(el); el.appendChild(chip);
   }
 
-  /* ---------------- Router ---------------- */
+  /* -------- Router -------- */
   var views = {
     home: byId('view-home'),
     portfolio: byId('view-portfolio'),
@@ -377,33 +420,32 @@
     window.scrollTo(0,0);
   }
 
-  function route(){
+  function routeWith(manifest){
     var h = (location.hash||'').replace(/^#/, '');
 
     if(h.indexOf('/portfolio') === 0){
       show('portfolio');
-      listPortfolio().then(function(list){
-        mountGrid('portfolioGrid', list, null);
-      }).catch(function(e){ err('portfolioError', e.message); });
+      try {
+        mountGrid('portfolioGrid', listPortfolio(manifest), null);
+      } catch(e){ err('portfolioError', e.message); }
       return;
     }
 
     if(h.indexOf('/travels') === 0){
       show('travels');
-      listTravelAll().then(function(all){
-        // group by first folder after /travels/
+      try{
+        var all = listTravelAll(manifest);
+        // group by folder
         var groups = {};
         for(var i=0;i<all.length;i++){
-          var m = /^travels\/([^\/]+)\//.exec(all[i].path);
-          var key = m ? decodeURIComponent(m[1]) : 'trip';
-          (groups[key]||(groups[key]=[])).push(all[i]);
+          var f = all[i]; (groups[f.folder]||(groups[f.folder]=[])).push(f);
         }
         var wrap = byId('travelCards'); clear(wrap);
+        var frag = document.createDocumentFragment();
         for(var folder in groups){
           if(!groups.hasOwnProperty(folder)) continue;
           var files = groups[folder];
           var card = document.createElement('article'); card.className='place';
-          // show the first media; videos are marked so CSS uses object-fit:contain
           if (files[0].type === 'video'){
             card.classList.add('video');
             card.appendChild(makeVideo(files[0].src));
@@ -417,9 +459,10 @@
           var a = document.createElement('a'); a.className='chip'; a.href = '#/travel/'+encodeURIComponent(folder); a.appendChild(document.createTextNode('View shots'));
           ov.appendChild(h4); ov.appendChild(p2); ov.appendChild(a);
           card.appendChild(ov);
-          wrap.appendChild(card);
+          frag.appendChild(card);
         }
-      }).catch(function(e){ err('travelsError', e.message); });
+        wrap.appendChild(frag);
+      }catch(e){ err('travelsError', e.message); }
       return;
     }
 
@@ -427,41 +470,49 @@
       var parts = h.split('/');
       var folder = decodeURIComponent(parts[2]||'').trim();
       show('album'); byId('albumTitle').textContent = folder.replace(/[-_]/g,' ');
-      listAlbum(folder).then(function(list){ mountGrid('albumGrid', list, null); })
-        .catch(function(e){ err('albumError', e.message); });
+      try{
+        mountGrid('albumGrid', listAlbum(manifest, folder), null);
+      }catch(e){ err('albumError', e.message); }
       return;
     }
 
     // HOME
     show('home');
-    Promise.all([listPortfolio(), listTravelAll()]).then(function(arr){
-      var p = arr[0], t = arr[1], P=[], T=[];
-      for(var i=0;i<p.length;i++) P.push({ src:p[i].src, alt:p[i].alt, kind:'portfolio', type:p[i].type });
-      for(var j=0;j<t.length;j++){
-        var m = /^travels\/([^\/]+)\//.exec(t[j].path);
-        T.push({ src:t[j].src, alt:t[j].alt, kind:'travel', folder:m?decodeURIComponent(m[1]):'trip', type:t[j].type });
-      }
+    try{
+      // stream from a mix of portfolio + travel
+      var P = listPortfolio(manifest).map(function(x){ return { kind:'portfolio', type:x.type, src:x.src, alt:x.alt }; });
+      var T = listTravelAll(manifest).map(function(x){ return { kind:'travel', folder:x.folder, type:x.type, src:x.src, alt:x.alt }; });
       var all = P.concat(T);
-      for(var k=all.length-1;k>0;k--){ var r=Math.floor(Math.random()*(k+1)); var tmp=all[k]; all[k]=all[r]; all[r]=tmp; }
+      for(var i=all.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=all[i]; all[i]=all[j]; all[j]=t; }
       var pick = all.slice(0, Math.min(12, all.length));
       mountGrid('streamGrid', pick, function(file){
         if(file.kind==='portfolio'){ location.hash = '#/portfolio'; }
         else{ location.hash = '#/travel/'+encodeURIComponent(file.folder); }
       });
-    }).catch(function(e){
+    }catch(e){
       var el = byId('streamGrid'); clear(el);
       var d = document.createElement('div'); d.className='chip';
       d.style.borderColor='#ff8a8a'; d.style.background='rgba(255,0,0,.12)'; d.style.color='#ffdede';
       d.appendChild(document.createTextNode(e.message));
       el.appendChild(d);
+    }
+  }
+
+  function boot(){
+    loadManifest().then(function(manifest){
+      // Hero image from profile (prefer image)
+      byId('heroImg').src = heroFromProfile(manifest);
+      routeWith(manifest);
+      window.addEventListener('hashchange', function(){ routeWith(manifest); });
+    }).catch(function(e){
+      // show errors in all views
+      err('portfolioError', e.message);
+      err('travelsError', e.message);
+      err('albumError', e.message);
     });
   }
 
-  window.addEventListener('hashchange', route);
-
-  // Init
-  heroFromProfile().then(function(src){ byId('heroImg').src = src; }).catch(function(){});
-  route();
+  boot();
 })();
 </script>
 </body>
