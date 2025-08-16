@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>William Darlington</title>
 
-  <!-- Favicon (root-relative to survive hash routing) -->
-  <link rel="icon" href="/favicon/user.png" sizes="32x32">
-  <link rel="shortcut icon" href="/favicon/user.png">
+  <!-- Favicon (root-relative so it works with hash routing) -->
+  <link rel="icon" href="/favicon/user.png" sizes="32x32" />
+  <link rel="shortcut icon" href="/favicon/user.png" />
   <meta name="theme-color" content="#0b0e14" />
 
   <!-- Fonts -->
@@ -53,9 +53,17 @@
       background:linear-gradient(135deg,var(--brand),var(--brand-2));
       font-weight:700;color:#0a0a0a;box-shadow:0 8px 24px var(--ring)
     }
-    /* let links work even though header is clickable */
+    /* allow links to be clickable even though header is */
     header .nav{pointer-events:none}
     header .nav a{pointer-events:auto}
+
+    /* Mobile nav tweaks */
+    @media (max-width:560px){
+      .nav{justify-content:center;padding:10px 14px}
+      .nav-links{gap:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+      .nav-links::-webkit-scrollbar{display:none}
+      .chip,.pill{padding:8px 12px;font-size:14px}
+    }
 
     /* Sections + HERO */
     section{padding:24px 0 52px}
@@ -73,7 +81,7 @@
     .view-head h2{font-size:clamp(24px,3vw,34px)}
     .back{padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14)}
 
-    /* Grids (home/album tiles preserve aspect; no crop) */
+    /* Base gallery tiles */
     .gallery{
       display:grid;
       grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
@@ -86,14 +94,24 @@
       box-shadow:var(--shadow);
       cursor:pointer
     }
-    .shot img{width:100%;height:auto}
-    .shot.video video{
-      width:100%;height:auto;object-fit:contain; /* keep original aspect */
-      background:#000
+
+    /* --- Fill behaviour to remove black bars on desktop --- */
+    /* Home stream + Portfolio: fill the tile (allows small crop) */
+    #streamGrid .shot, #portfolioGrid .shot { aspect-ratio:16/9; }
+    #streamGrid .shot img, #streamGrid .shot video,
+    #portfolioGrid .shot img, #portfolioGrid .shot video{
+      width:100%;height:100%;object-fit:cover;background:#000;
     }
+
+    /* Album page: preserve originals (no crop) */
+    #albumGrid .shot{ aspect-ratio:auto; }
+    #albumGrid .shot img, #albumGrid .shot video{
+      width:100%;height:auto;object-fit:contain;background:#000;
+    }
+
     .stream-grid{margin-top:12px}
 
-    /* Travel index cards (fixed 16:9, always fill – no bars) */
+    /* Travel index cards (consistent 16:9 box, always fill) */
     .travel-grid{
       display:grid;gap:20px;
       grid-template-columns:repeat(auto-fill,minmax(300px,1fr))
@@ -101,11 +119,10 @@
     .place{
       position:relative;border-radius:var(--radius);
       overflow:hidden;box-shadow:var(--shadow);
-      aspect-ratio:16/9; background:#000;
+      aspect-ratio:16/9;background:#000
     }
-    .place img,
-    .place video{ /* fill frame for both types */
-      width:100%;height:100%;object-fit:cover;
+    .place img,.place video{
+      width:100%;height:100%;object-fit:cover;display:block;background:#000
     }
     .place .overlay{
       position:absolute;inset:0;
@@ -208,17 +225,15 @@
   var GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
   var IMG_EXT   = ['.jpg','.jpeg','.png','.webp','.gif','.avif'];
   var VIDEO_EXT = ['.mp4','.webm'];
-  var CACHE_TTL = 24 * 60 * 60 * 1000;     // 24h per-user cache
-  var CACHE_VERSION = 'v1.2';              // bump to invalidate
+  var CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
+  var CACHE_VERSION = 'v1.2';          // bump to invalidate local cache
 
-  // Build raw file URL (no API for the actual media)
+  // raw URL builder (no API for file bytes)
   function rawURL(path){
-    return 'https://raw.githubusercontent.com/'
-      + GH.owner + '/' + GH.repo + '/' + GH.ref + '/'
-      + encodeURI(path);
+    return 'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path);
   }
 
-  // Header (except links) navigates Home
+  // Header (except links) goes Home
   document.querySelector('header').addEventListener('click', function(e){
     if (e.target.closest('a')) return;
     location.hash = '#/';
@@ -229,7 +244,7 @@
     name = (name||'').toLowerCase();
     for (var i=0;i<exts.length;i++){
       var ext = exts[i];
-      if (name.indexOf(ext, name.length - ext.length) !== -1) return true;
+      if (name.indexOf(ext, name.length-ext.length) !== -1) return true;
     }
     return false;
   }
@@ -260,7 +275,7 @@
     });
   }
 
-  /* -------- Manifest: baked or 2 API calls (commit+tree) -------- */
+  /* -------- Manifest loading (max 2 API calls) -------- */
   function buildManifestFromTree(tree){
     var files = tree && tree.tree ? tree.tree : [];
     var manifest = { portfolio:[], travels:{}, profile:[] };
@@ -275,7 +290,7 @@
         var parts = it.path.split('/');
         if (parts.length >= 3){
           var folder = decodeURIComponent(parts[1]);
-          (manifest.travels[folder] || (manifest.travels[folder]=[])).push(it.path);
+          (manifest.travels[folder]||(manifest.travels[folder]=[])).push(it.path);
         }
       } else if (it.path.indexOf('profile/') === 0){
         manifest.profile.push(it.path);
@@ -288,82 +303,79 @@
     var cached = cacheGet('manifest');
     if (cached) return Promise.resolve(cached);
 
-    return fetch('/manifest.json', {cache:'no-store'}).then(function(r){
-      if (r.ok) return r.json();
-      throw new Error('no baked manifest');
-    }).catch(function(){
-      return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
-        .then(function(commit){
-          var treeSha = commit && commit.commit && commit.commit.tree && commit.commit.tree.sha;
-          if (!treeSha) throw new Error('Missing tree SHA');
-          return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+treeSha+'?recursive=1');
-        })
-        .then(buildManifestFromTree);
-    }).then(function(manifest){
-      cacheSet('manifest', manifest);
-      return manifest;
-    });
+    // Try baked manifest first (optional)
+    return fetch('/manifest.json', {cache:'no-store'})
+      .then(function(r){ if(r.ok) return r.json(); throw new Error('no baked manifest'); })
+      .catch(function(){
+        // Fallback to GitHub API: commits -> tree
+        return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
+          .then(function(commit){
+            var sha = commit && commit.commit && commit.commit.tree && commit.commit.tree.sha;
+            if (!sha) throw new Error('Missing tree SHA');
+            return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+sha+'?recursive=1');
+          })
+          .then(buildManifestFromTree);
+      })
+      .then(function(manifest){ cacheSet('manifest', manifest); return manifest; });
   }
 
-  /* -------- Data from manifest -------- */
-  function listPortfolio(manifest){
-    return (manifest.portfolio || []).map(function(p){
-      return { src: rawURL(p), alt: p.split('/').pop(), path:p, type: isVideo(p) ? 'video' : 'image' };
+  /* -------- Data helpers -------- */
+  function listPortfolio(m){
+    return (m.portfolio||[]).map(function(p){
+      return { src:rawURL(p), alt:p.split('/').pop(), path:p, type:isVideo(p)?'video':'image' };
     });
   }
-  function listTravelAll(manifest){
-    var out = [], groups = manifest.travels || {};
-    for (var folder in groups){
-      if(!groups.hasOwnProperty(folder)) continue;
-      var arr = groups[folder];
-      for (var i=0;i<arr.length;i++){
-        var p = arr[i];
-        out.push({ src: rawURL(p), alt: p.split('/').pop(), path:p, folder:folder, type: isVideo(p) ? 'video' : 'image' });
+  function listTravelAll(m){
+    var out=[], g=m.travels||{};
+    for (var folder in g){
+      if(!g.hasOwnProperty(folder)) continue;
+      for (var i=0;i<g[folder].length;i++){
+        var p=g[folder][i];
+        out.push({ src:rawURL(p), alt:p.split('/').pop(), path:p, folder:folder, type:isVideo(p)?'video':'image' });
       }
     }
     return out;
   }
-  function listAlbum(manifest, folder){
-    var arr = (manifest.travels && manifest.travels[folder]) ? manifest.travels[folder] : [];
+  function listAlbum(m, folder){
+    var arr=(m.travels&&m.travels[folder])?m.travels[folder]:[];
     return arr.map(function(p){
-      return { src: rawURL(p), alt: p.split('/').pop(), path:p, type: isVideo(p) ? 'video' : 'image' };
+      return { src:rawURL(p), alt:p.split('/').pop(), path:p, type:isVideo(p)?'video':'image' };
     });
   }
-  function heroFromProfile(manifest){
-    var pics = (manifest.profile || []).filter(function(p){ return isImg(p); });
-    if (pics.length) return rawURL(pics[0]);
-    var any = (manifest.profile || [])[0];
-    return any ? rawURL(any) : 'user.png';
+  function heroFromProfile(m){
+    var pics=(m.profile||[]).filter(isImg);
+    if(pics.length) return rawURL(pics[0]);
+    var any=(m.profile||[])[0];
+    return any?rawURL(any):'user.png';
   }
 
-  /* -------- DOM -------- */
+  /* -------- DOM helpers -------- */
   function byId(id){ return document.getElementById(id); }
   function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
 
   function makeVideo(src){
-    var v = document.createElement('video');
-    v.src = src; v.muted = true; v.loop = true; v.autoplay = true;
-    v.playsInline = true; v.preload = 'metadata'; v.controls = false;
+    var v=document.createElement('video');
+    v.src=src; v.muted=true; v.loop=true; v.autoplay=true;
+    v.playsInline=true; v.preload='metadata'; v.controls=false;
     return v;
   }
 
   function mountGrid(elId, files, onClick){
-    var el = byId(elId); clear(el);
+    var el=byId(elId); clear(el);
     if(!files.length){
-      var p = document.createElement('p'); p.style.color='#9aa7bd'; p.appendChild(document.createTextNode('Nothing here yet.'));
+      var p=document.createElement('p'); p.style.color='#9aa7bd'; p.appendChild(document.createTextNode('Nothing here yet.'));
       el.appendChild(p); return;
     }
-    var frag = document.createDocumentFragment();
+    var frag=document.createDocumentFragment();
     for(var i=0;i<files.length;i++){
       (function(f){
-        var fig = document.createElement('figure'); fig.className='shot';
-        if (f.type === 'video'){
-          fig.className += ' video';
-          var v = makeVideo(f.src);
+        var fig=document.createElement('figure'); fig.className='shot';
+        if(f.type==='video'){
+          var v=makeVideo(f.src);
           if(onClick){ fig.addEventListener('click', function(){ onClick(f); }); }
           fig.appendChild(v);
-        } else {
-          var img = new Image(); img.src=f.src; img.alt=f.alt; img.loading='lazy'; img.decoding='async';
+        }else{
+          var img=new Image(); img.src=f.src; img.alt=f.alt; img.loading='lazy'; img.decoding='async';
           if(onClick){ img.addEventListener('click', function(){ onClick(f); }); }
           fig.appendChild(img);
         }
@@ -374,8 +386,8 @@
   }
 
   function err(elId, msg){
-    var el = byId(elId); if(!el) return;
-    var chip = document.createElement('div');
+    var el=byId(elId); if(!el) return;
+    var chip=document.createElement('div');
     chip.className='chip';
     chip.style.borderColor='#ff8a8a'; chip.style.background='rgba(255,0,0,.12)'; chip.style.color='#ffdede';
     chip.appendChild(document.createTextNode(msg));
@@ -383,55 +395,49 @@
   }
 
   /* -------- Router -------- */
-  var views = {
-    home: byId('view-home'),
-    portfolio: byId('view-portfolio'),
-    travels: byId('view-travels'),
-    album: byId('view-album')
+  var views={
+    home:byId('view-home'),
+    portfolio:byId('view-portfolio'),
+    travels:byId('view-travels'),
+    album:byId('view-album')
   };
-
   function show(name){
     for(var k in views){ if(views.hasOwnProperty(k)) views[k].classList.add('hidden'); }
     views[name].classList.remove('hidden');
     window.scrollTo(0,0);
   }
 
-  function routeWith(manifest){
-    var h = (location.hash||'').replace(/^#/, '');
+  function routeWith(m){
+    var h=(location.hash||'').replace(/^#/, '');
 
-    if(h.indexOf('/portfolio') === 0){
+    if(h.indexOf('/portfolio')===0){
       show('portfolio');
-      try { mountGrid('portfolioGrid', listPortfolio(manifest), null); }
+      try{ mountGrid('portfolioGrid', listPortfolio(m), null); }
       catch(e){ err('portfolioError', e.message); }
       return;
     }
 
-    if(h.indexOf('/travels') === 0){
+    if(h.indexOf('/travels')===0){
       show('travels');
       try{
-        var all = listTravelAll(manifest);
-        var groups = {};
-        for(var i=0;i<all.length;i++){
-          var f = all[i]; (groups[f.folder]||(groups[f.folder]=[])).push(f);
-        }
-        var wrap = byId('travelCards'); clear(wrap);
-        var frag = document.createDocumentFragment();
+        var all=listTravelAll(m), groups={};
+        for(var i=0;i<all.length;i++){ var f=all[i]; (groups[f.folder]||(groups[f.folder]=[])).push(f); }
+        var wrap=byId('travelCards'); clear(wrap);
+        var frag=document.createDocumentFragment();
         for(var folder in groups){
           if(!groups.hasOwnProperty(folder)) continue;
-          var files = groups[folder];
-          var card = document.createElement('article'); card.className='place';
-
-          if (files[0].type === 'video'){
-            card.appendChild(makeVideo(files[0].src));  // fills via CSS cover
-          } else {
-            var img = new Image(); img.src = files[0].src; img.alt = folder; img.loading='lazy';
+          var files=groups[folder];
+          var card=document.createElement('article'); card.className='place';
+          if(files[0].type==='video'){
+            card.appendChild(makeVideo(files[0].src));
+          }else{
+            var img=new Image(); img.src=files[0].src; img.alt=folder; img.loading='lazy';
             card.appendChild(img);
           }
-
-          var ov = document.createElement('div'); ov.className='overlay';
-          var h4 = document.createElement('h4'); h4.appendChild(document.createTextNode(folder.replace(/[-_]/g,' ')));
-          var p2 = document.createElement('p'); p2.appendChild(document.createTextNode(files.length+' file'+(files.length>1?'s':'')));
-          var a = document.createElement('a'); a.className='chip'; a.href = '#/travel/'+encodeURIComponent(folder); a.appendChild(document.createTextNode('View shots'));
+          var ov=document.createElement('div'); ov.className='overlay';
+          var h4=document.createElement('h4'); h4.appendChild(document.createTextNode(folder.replace(/[-_]/g,' ')));
+          var p2=document.createElement('p'); p2.appendChild(document.createTextNode(files.length+' file'+(files.length>1?'s':'')));
+          var a=document.createElement('a'); a.className='chip'; a.href='#/travel/'+encodeURIComponent(folder); a.appendChild(document.createTextNode('View shots'));
           ov.appendChild(h4); ov.appendChild(p2); ov.appendChild(a);
           card.appendChild(ov);
           frag.appendChild(card);
@@ -441,11 +447,10 @@
       return;
     }
 
-    if(h.indexOf('/travel/') === 0){
-      var parts = h.split('/');
-      var folder = decodeURIComponent(parts[2]||'').trim();
-      show('album'); byId('albumTitle').textContent = folder.replace(/[-_]/g,' ');
-      try{ mountGrid('albumGrid', listAlbum(manifest, folder), null); }
+    if(h.indexOf('/travel/')===0){
+      var parts=h.split('/'); var folder=decodeURIComponent(parts[2]||'').trim();
+      show('album'); byId('albumTitle').textContent=folder.replace(/[-_]/g,' ');
+      try{ mountGrid('albumGrid', listAlbum(m, folder), null); }
       catch(e){ err('albumError', e.message); }
       return;
     }
@@ -453,18 +458,18 @@
     // HOME
     show('home');
     try{
-      var P = listPortfolio(manifest).map(function(x){ return { kind:'portfolio', type:x.type, src:x.src, alt:x.alt }; });
-      var T = listTravelAll(manifest).map(function(x){ return { kind:'travel', folder:x.folder, type:x.type, src:x.src, alt:x.alt }; });
-      var all = P.concat(T);
+      var P=listPortfolio(m).map(function(x){ return {kind:'portfolio',type:x.type,src:x.src,alt:x.alt}; });
+      var T=listTravelAll(m).map(function(x){ return {kind:'travel',folder:x.folder,type:x.type,src:x.src,alt:x.alt}; });
+      var all=P.concat(T);
       for(var i=all.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=all[i]; all[i]=all[j]; all[j]=t; }
-      var pick = all.slice(0, Math.min(12, all.length));
+      var pick=all.slice(0, Math.min(12, all.length));
       mountGrid('streamGrid', pick, function(file){
-        if(file.kind==='portfolio'){ location.hash = '#/portfolio'; }
-        else{ location.hash = '#/travel/'+encodeURIComponent(file.folder); }
+        if(file.kind==='portfolio'){ location.hash='#/portfolio'; }
+        else{ location.hash='#/travel/'+encodeURIComponent(file.folder); }
       });
     }catch(e){
-      var el = byId('streamGrid'); clear(el);
-      var d = document.createElement('div'); d.className='chip';
+      var el=byId('streamGrid'); clear(el);
+      var d=document.createElement('div'); d.className='chip';
       d.style.borderColor='#ff8a8a'; d.style.background='rgba(255,0,0,.12)'; d.style.color='#ffdede';
       d.appendChild(document.createTextNode(e.message));
       el.appendChild(d);
@@ -472,10 +477,10 @@
   }
 
   function boot(){
-    loadManifest().then(function(manifest){
-      byId('heroImg').src = heroFromProfile(manifest);
-      routeWith(manifest);
-      window.addEventListener('hashchange', function(){ routeWith(manifest); });
+    loadManifest().then(function(m){
+      byId('heroImg').src = heroFromProfile(m);
+      routeWith(m);
+      window.addEventListener('hashchange', function(){ routeWith(m); });
     }).catch(function(e){
       err('portfolioError', e.message);
       err('travelsError', e.message);
