@@ -53,7 +53,7 @@
       background:linear-gradient(135deg,var(--brand),var(--brand-2));
       font-weight:700;color:#0a0a0a;box-shadow:0 8px 24px var(--ring)
     }
-    /* allow links to be clickable even though header is */
+    /* let links work even though header is clickable */
     header .nav{pointer-events:none}
     header .nav a{pointer-events:auto}
 
@@ -73,7 +73,7 @@
     .view-head h2{font-size:clamp(24px,3vw,34px)}
     .back{padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14)}
 
-    /* Grids — tiles never crop images or videos */
+    /* Grids (home/album tiles preserve aspect; no crop) */
     .gallery{
       display:grid;
       grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
@@ -88,12 +88,12 @@
     }
     .shot img{width:100%;height:auto}
     .shot.video video{
-      width:100%;height:auto;object-fit:contain;
+      width:100%;height:auto;object-fit:contain; /* keep original aspect */
       background:#000
     }
     .stream-grid{margin-top:12px}
 
-    /* Travel index cards (consistent 16:9 box) */
+    /* Travel index cards (fixed 16:9, always fill – no bars) */
     .travel-grid{
       display:grid;gap:20px;
       grid-template-columns:repeat(auto-fill,minmax(300px,1fr))
@@ -101,14 +101,11 @@
     .place{
       position:relative;border-radius:var(--radius);
       overflow:hidden;box-shadow:var(--shadow);
-      aspect-ratio:16/9;
-      background:#000
+      aspect-ratio:16/9; background:#000;
     }
-    .place img{
-      width:100%;height:100%;object-fit:cover  /* photos = hero look */
-    }
-    .place.video video{
-      width:100%;height:100%;object-fit:contain /* videos = no crop */
+    .place img,
+    .place video{ /* fill frame for both types */
+      width:100%;height:100%;object-fit:cover;
     }
     .place .overlay{
       position:absolute;inset:0;
@@ -198,7 +195,7 @@
   <div class="container footer-center">
     <div class="social">
       <a class="chip" href="https://www.linkedin.com/in/william-darlington-736475212/" target="_blank" rel="noopener">LinkedIn</a>
-      <a class="chip" href="https://instagram.com/wi11.4m" target="_blank" rel="noopener">Insta</a>
+      <a class="chip" href="https://instagram.com/wi11.4m" target="_blank" rel="noopener">Instagram</a>
     </div>
   </div>
 </footer>
@@ -211,23 +208,23 @@
   var GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
   var IMG_EXT   = ['.jpg','.jpeg','.png','.webp','.gif','.avif'];
   var VIDEO_EXT = ['.mp4','.webm'];
-  var CACHE_TTL = 24 * 60 * 60 * 1000;     // 24h
-  var CACHE_VERSION = 'v1.1';              // bump to invalidate local cache
+  var CACHE_TTL = 24 * 60 * 60 * 1000;     // 24h per-user cache
+  var CACHE_VERSION = 'v1.2';              // bump to invalidate
 
-  // root-relative raw URL builder (no API for downloads)
+  // Build raw file URL (no API for the actual media)
   function rawURL(path){
     return 'https://raw.githubusercontent.com/'
       + GH.owner + '/' + GH.repo + '/' + GH.ref + '/'
       + encodeURI(path);
   }
 
-  // Make header (except links) go Home
+  // Header (except links) navigates Home
   document.querySelector('header').addEventListener('click', function(e){
     if (e.target.closest('a')) return;
     location.hash = '#/';
   });
 
-  /* -------- Small utils -------- */
+  /* -------- Utils -------- */
   function hasExt(name, exts){
     name = (name||'').toLowerCase();
     for (var i=0;i<exts.length;i++){
@@ -256,29 +253,21 @@
     return fetch(url, {headers:{'Accept':'application/vnd.github+json'}}).then(function(r){
       if(!r.ok){
         return r.json().catch(function(){return {message:''};}).then(function(j){
-          var msg = (j && j.message) ? j.message : '';
-          throw new Error('HTTP '+r.status+' '+msg);
+          throw new Error('HTTP '+r.status+' '+(j.message||''));
         });
       }
       return r.json();
     });
   }
 
-  /* -------- Manifest loading (0–2 API calls total) --------
-     1) Try optional /manifest.json (no API)
-     2) Else: GET /commits/:ref  -> get tree SHA
-              GET /git/trees/:sha?recursive=1 -> full file list
-     Build a manifest of media paths from the tree.
-  --------------------------------------------------------- */
+  /* -------- Manifest: baked or 2 API calls (commit+tree) -------- */
   function buildManifestFromTree(tree){
-    // tree.tree is an array of { path, type, mode, sha, size, url }
     var files = tree && tree.tree ? tree.tree : [];
     var manifest = { portfolio:[], travels:{}, profile:[] };
-
     for (var i=0;i<files.length;i++){
       var it = files[i];
-      if (it.type !== 'blob') continue;            // skip dirs
-      if (!isMedia(it.path)) continue;             // only images/videos
+      if (it.type !== 'blob') continue;
+      if (!isMedia(it.path)) continue;
 
       if (it.path.indexOf('portfolio/') === 0){
         manifest.portfolio.push(it.path);
@@ -299,37 +288,31 @@
     var cached = cacheGet('manifest');
     if (cached) return Promise.resolve(cached);
 
-    // (1) try baked /manifest.json if present
     return fetch('/manifest.json', {cache:'no-store'}).then(function(r){
       if (r.ok) return r.json();
       throw new Error('no baked manifest');
     }).catch(function(){
-      // (2) fallback to GitHub API: 2 calls total
       return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
         .then(function(commit){
           var treeSha = commit && commit.commit && commit.commit.tree && commit.commit.tree.sha;
           if (!treeSha) throw new Error('Missing tree SHA');
           return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+treeSha+'?recursive=1');
         })
-        .then(function(tree){
-          return buildManifestFromTree(tree);
-        });
+        .then(buildManifestFromTree);
     }).then(function(manifest){
       cacheSet('manifest', manifest);
       return manifest;
     });
   }
 
-  /* -------- Data helpers (from manifest) -------- */
+  /* -------- Data from manifest -------- */
   function listPortfolio(manifest){
     return (manifest.portfolio || []).map(function(p){
       return { src: rawURL(p), alt: p.split('/').pop(), path:p, type: isVideo(p) ? 'video' : 'image' };
     });
   }
-
   function listTravelAll(manifest){
-    var out = [];
-    var groups = manifest.travels || {};
+    var out = [], groups = manifest.travels || {};
     for (var folder in groups){
       if(!groups.hasOwnProperty(folder)) continue;
       var arr = groups[folder];
@@ -340,14 +323,12 @@
     }
     return out;
   }
-
   function listAlbum(manifest, folder){
     var arr = (manifest.travels && manifest.travels[folder]) ? manifest.travels[folder] : [];
     return arr.map(function(p){
       return { src: rawURL(p), alt: p.split('/').pop(), path:p, type: isVideo(p) ? 'video' : 'image' };
     });
   }
-
   function heroFromProfile(manifest){
     var pics = (manifest.profile || []).filter(function(p){ return isImg(p); });
     if (pics.length) return rawURL(pics[0]);
@@ -355,19 +336,14 @@
     return any ? rawURL(any) : 'user.png';
   }
 
-  /* -------- DOM helpers -------- */
+  /* -------- DOM -------- */
   function byId(id){ return document.getElementById(id); }
   function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
 
   function makeVideo(src){
     var v = document.createElement('video');
-    v.src = src;
-    v.muted = true;
-    v.loop = true;
-    v.autoplay = true;
-    v.playsInline = true;
-    v.preload = 'metadata';
-    v.controls = false;
+    v.src = src; v.muted = true; v.loop = true; v.autoplay = true;
+    v.playsInline = true; v.preload = 'metadata'; v.controls = false;
     return v;
   }
 
@@ -425,9 +401,8 @@
 
     if(h.indexOf('/portfolio') === 0){
       show('portfolio');
-      try {
-        mountGrid('portfolioGrid', listPortfolio(manifest), null);
-      } catch(e){ err('portfolioError', e.message); }
+      try { mountGrid('portfolioGrid', listPortfolio(manifest), null); }
+      catch(e){ err('portfolioError', e.message); }
       return;
     }
 
@@ -435,7 +410,6 @@
       show('travels');
       try{
         var all = listTravelAll(manifest);
-        // group by folder
         var groups = {};
         for(var i=0;i<all.length;i++){
           var f = all[i]; (groups[f.folder]||(groups[f.folder]=[])).push(f);
@@ -446,13 +420,14 @@
           if(!groups.hasOwnProperty(folder)) continue;
           var files = groups[folder];
           var card = document.createElement('article'); card.className='place';
+
           if (files[0].type === 'video'){
-            card.classList.add('video');
-            card.appendChild(makeVideo(files[0].src));
+            card.appendChild(makeVideo(files[0].src));  // fills via CSS cover
           } else {
             var img = new Image(); img.src = files[0].src; img.alt = folder; img.loading='lazy';
             card.appendChild(img);
           }
+
           var ov = document.createElement('div'); ov.className='overlay';
           var h4 = document.createElement('h4'); h4.appendChild(document.createTextNode(folder.replace(/[-_]/g,' ')));
           var p2 = document.createElement('p'); p2.appendChild(document.createTextNode(files.length+' file'+(files.length>1?'s':'')));
@@ -470,16 +445,14 @@
       var parts = h.split('/');
       var folder = decodeURIComponent(parts[2]||'').trim();
       show('album'); byId('albumTitle').textContent = folder.replace(/[-_]/g,' ');
-      try{
-        mountGrid('albumGrid', listAlbum(manifest, folder), null);
-      }catch(e){ err('albumError', e.message); }
+      try{ mountGrid('albumGrid', listAlbum(manifest, folder), null); }
+      catch(e){ err('albumError', e.message); }
       return;
     }
 
     // HOME
     show('home');
     try{
-      // stream from a mix of portfolio + travel
       var P = listPortfolio(manifest).map(function(x){ return { kind:'portfolio', type:x.type, src:x.src, alt:x.alt }; });
       var T = listTravelAll(manifest).map(function(x){ return { kind:'travel', folder:x.folder, type:x.type, src:x.src, alt:x.alt }; });
       var all = P.concat(T);
@@ -500,12 +473,10 @@
 
   function boot(){
     loadManifest().then(function(manifest){
-      // Hero image from profile (prefer image)
       byId('heroImg').src = heroFromProfile(manifest);
       routeWith(manifest);
       window.addEventListener('hashchange', function(){ routeWith(manifest); });
     }).catch(function(e){
-      // show errors in all views
       err('portfolioError', e.message);
       err('travelsError', e.message);
       err('albumError', e.message);
