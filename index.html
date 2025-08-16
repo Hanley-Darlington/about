@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>William Darlington</title>
 
-  <!-- Favicon (root-relative so it works with hash routing) -->
+  <!-- Favicon (keep PNG/ICO for widest support) -->
   <link rel="icon" href="/favicon/user.png" sizes="32x32" />
   <link rel="shortcut icon" href="/favicon/user.png" />
   <meta name="theme-color" content="#0b0e14" />
@@ -39,9 +39,9 @@
       background:rgba(15,21,36,.78);
       backdrop-filter:saturate(150%) blur(12px);
       border-bottom:1px solid rgba(255,255,255,.08);
-      cursor:pointer; /* whole bar = Home */
+      cursor:pointer;
     }
-    .nav{display:flex;justify-content:flex-end;align-items:center;padding:14px 28px;gap:12px}
+    .nav{display:flex;justify-content:space-between;align-items:center;padding:14px 28px;gap:12px}
     .nav-links{display:flex;gap:12px;flex-wrap:wrap}
     .chip{
       padding:8px 12px;border-radius:999px;
@@ -54,8 +54,12 @@
       font-weight:700;color:#0a0a0a;box-shadow:0 8px 24px var(--ring)
     }
     /* allow links to be clickable even though header is */
-    header .nav{pointer-events:none}
-    header .nav a{pointer-events:auto}
+    header .nav{pointer-events:auto}
+    header .nav a.nav-home-area{position:absolute;inset:0;pointer-events:auto}
+
+    .right-controls{display:flex;gap:10px;align-items:center}
+    .toggle{display:inline-flex;align-items:center;gap:8px}
+    .toggle input{accent-color:#7c3aed;transform:scale(1.2)}
 
     /* Mobile nav tweaks */
     @media (max-width:560px){
@@ -63,6 +67,7 @@
       .nav-links{gap:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
       .nav-links::-webkit-scrollbar{display:none}
       .chip,.pill{padding:8px 12px;font-size:14px}
+      .right-controls{position:fixed;right:10px;top:10px}
     }
 
     /* Sections + HERO */
@@ -95,15 +100,14 @@
       cursor:pointer
     }
 
-    /* --- Fill behaviour to remove black bars on desktop --- */
-    /* Home stream + Portfolio: fill the tile (allows small crop) */
+    /* Fill behaviour */
     #streamGrid .shot, #portfolioGrid .shot { aspect-ratio:16/9; }
     #streamGrid .shot img, #streamGrid .shot video,
     #portfolioGrid .shot img, #portfolioGrid .shot video{
       width:100%;height:100%;object-fit:cover;background:#000;
     }
 
-    /* Album page: preserve originals (no crop) */
+    /* Album page: preserve originals */
     #albumGrid .shot{ aspect-ratio:auto; }
     #albumGrid .shot img, #albumGrid .shot video{
       width:100%;height:auto;object-fit:contain;background:#000;
@@ -111,7 +115,7 @@
 
     .stream-grid{margin-top:12px}
 
-    /* Travel index cards (consistent 16:9 box, always fill) */
+    /* Travel index cards */
     .travel-grid{
       display:grid;gap:20px;
       grid-template-columns:repeat(auto-fill,minmax(300px,1fr))
@@ -137,10 +141,24 @@
     footer{padding:28px 0;border-top:1px solid rgba(255,255,255,.08)}
     .footer-center{display:flex;flex-direction:column;align-items:center;gap:10px}
     .social{display:flex;gap:10px}
+
+    /* Error bar */
+    .errorbar{
+      position:fixed;left:50%;transform:translateX(-50%);
+      top:70px;z-index:60;max-width:min(1000px,92%);width:fit-content
+    }
+    .errorchip{
+      display:flex;gap:10px;align-items:center;
+      padding:10px 14px;border-radius:12px;
+      background:rgba(255,0,0,.12); color:#ffdede;
+      border:1px solid #ff8a8a; box-shadow:var(--shadow)
+    }
+    .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:#1a1f2e;padding:2px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.08)}
   </style>
 </head>
 <body>
 <header>
+  <a class="nav-home-area" href="#/"></a>
   <div class="nav container">
     <nav class="nav-links">
       <a class="chip" href="#/portfolio">Portfolio</a>
@@ -148,8 +166,19 @@
       <a class="pill" href="https://hdbot.io" target="_blank" rel="noopener">ALGOs</a>
       <a class="chip" href="mailto:hanley.darlington@gmail.com">Contact</a>
     </nav>
+
+    <div class="right-controls">
+      <button id="btnRefresh" class="chip" title="Hard refresh (clear cache, bust URLs)">⟳ Refresh</button>
+      <label class="toggle chip" title="Auto-refresh every 10 seconds">
+        <input type="checkbox" id="autoToggle" />
+        Auto
+      </label>
+      <span class="chip" id="statusChip" title="Status">Idle</span>
+    </div>
   </div>
 </header>
+
+<div class="errorbar" id="errorBar" aria-live="polite"></div>
 
 <main>
   <!-- HOME -->
@@ -159,6 +188,7 @@
         <div>
           <h1>William Darlington</h1>
           <p>Vires in Numeris</p>
+          <p style="color:#9aa7bd;margin-top:8px;font-size:14px">Tip: press <span class="kbd">R</span> to refresh • <span class="kbd">A</span> to toggle auto</p>
         </div>
         <div class="hero-card">
           <img id="heroImg" src="user.png" alt="Profile">
@@ -226,18 +256,33 @@
   var IMG_EXT   = ['.jpg','.jpeg','.png','.webp','.gif','.avif'];
   var VIDEO_EXT = ['.mp4','.webm'];
   var CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
-  var CACHE_VERSION = 'v1.2';          // bump to invalidate local cache
+  var CACHE_VERSION = 'v1.3';          // bump to invalidate local cache
+  var AUTO_INTERVAL_MS = 10000;        // 10s for testing
+  var USE_BUST = false;                // toggled on hard refresh to force image reloads
 
-  // raw URL builder (no API for file bytes)
-  function rawURL(path){
-    return 'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path);
+  /* -------- Status + Errors -------- */
+  function setStatus(txt){
+    var s=document.getElementById('statusChip');
+    if(!s) return;
+    s.textContent = txt || 'Idle';
+  }
+  function showError(msg){
+    console.error(msg);
+    var bar=document.getElementById('errorBar');
+    if(!bar) return;
+    var wrap=document.createElement('div');
+    wrap.className='errorchip';
+    wrap.textContent = String(msg);
+    bar.appendChild(wrap);
+    setTimeout(function(){ if(wrap && wrap.parentNode){ wrap.parentNode.removeChild(wrap); } }, 6000);
   }
 
-  // Header (except links) goes Home
-  document.querySelector('header').addEventListener('click', function(e){
-    if (e.target.closest('a')) return;
-    location.hash = '#/';
-  });
+  /* -------- URL helpers -------- */
+  function rawURL(path){
+    var u='https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path);
+    if(USE_BUST){ u += (u.indexOf('?')===-1?'?':'&')+'bust='+(Date.now()); }
+    return u;
+  }
 
   /* -------- Utils -------- */
   function hasExt(name, exts){
@@ -263,9 +308,16 @@
     }catch(e){ return null; }
   }
   function cacheSet(k,v){ try{ localStorage.setItem(cacheKey(k), JSON.stringify({t:Date.now(), data:v})); }catch(e){} }
+  function cacheClearAll(){
+    try{
+      Object.keys(localStorage).forEach(function(key){
+        if(key.indexOf(GH.owner+':'+GH.repo+':'+GH.ref+':')===0) localStorage.removeItem(key);
+      });
+    }catch(e){}
+  }
 
   function fetchJSON(url){
-    return fetch(url, {headers:{'Accept':'application/vnd.github+json'}}).then(function(r){
+    return fetch(url, {headers:{'Accept':'application/vnd.github+json','Cache-Control':'no-cache'}}).then(function(r){
       if(!r.ok){
         return r.json().catch(function(){return {message:''};}).then(function(j){
           throw new Error('HTTP '+r.status+' '+(j.message||''));
@@ -299,24 +351,29 @@
     return manifest;
   }
 
-  function loadManifest(){
-    var cached = cacheGet('manifest');
-    if (cached) return Promise.resolve(cached);
+  function loadManifest(forceFresh){
+    if (!forceFresh){
+      var cached = cacheGet('manifest');
+      if (cached) return Promise.resolve(cached);
+    }
 
     // Try baked manifest first (optional)
-    return fetch('/manifest.json', {cache:'no-store'})
-      .then(function(r){ if(r.ok) return r.json(); throw new Error('no baked manifest'); })
-      .catch(function(){
-        // Fallback to GitHub API: commits -> tree
-        return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
-          .then(function(commit){
-            var sha = commit && commit.commit && commit.commit.tree && commit.commit.tree.sha;
-            if (!sha) throw new Error('Missing tree SHA');
-            return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+sha+'?recursive=1');
-          })
-          .then(buildManifestFromTree);
-      })
-      .then(function(manifest){ cacheSet('manifest', manifest); return manifest; });
+    return fetch('/manifest.json', {cache:'no-store'}).then(function(r){
+      if(r.ok) return r.json();
+      throw new Error('no baked manifest');
+    }).catch(function(){
+      // Fallback to GitHub API: commits -> tree
+      return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
+        .then(function(commit){
+          var sha = commit && commit.commit && commit.commit.tree && commit.commit.tree.sha;
+          if (!sha) throw new Error('Missing tree SHA');
+          return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+sha+'?recursive=1');
+        })
+        .then(buildManifestFromTree);
+    }).then(function(manifest){
+      cacheSet('manifest', manifest);
+      return manifest;
+    });
   }
 
   /* -------- Data helpers -------- */
@@ -392,6 +449,7 @@
     chip.style.borderColor='#ff8a8a'; chip.style.background='rgba(255,0,0,.12)'; chip.style.color='#ffdede';
     chip.appendChild(document.createTextNode(msg));
     clear(el); el.appendChild(chip);
+    showError(msg);
   }
 
   /* -------- Router -------- */
@@ -408,7 +466,8 @@
   }
 
   function routeWith(m){
-    var h=(location.hash||'').replace(/^#/, '');
+    var h=(location.hash||'#/').replace(/^#/, '');
+    if(h==='') h='/';
 
     if(h.indexOf('/portfolio')===0){
       show('portfolio');
@@ -417,7 +476,7 @@
       return;
     }
 
-    if(h.indexOf('/travels')===0){
+    if(h.indexOf('/travels')===0 && h.indexOf('/travel/')!==0){
       show('travels');
       try{
         var all=listTravelAll(m), groups={};
@@ -473,22 +532,73 @@
       d.style.borderColor='#ff8a8a'; d.style.background='rgba(255,0,0,.12)'; d.style.color='#ffdede';
       d.appendChild(document.createTextNode(e.message));
       el.appendChild(d);
+      showError(e.message);
     }
   }
 
-  function boot(){
-    loadManifest().then(function(m){
-      byId('heroImg').src = heroFromProfile(m);
+  /* -------- Boot + Refresh -------- */
+  var autoTimer=null;
+
+  function boot(forceFresh){
+    setStatus(forceFresh?'Refreshing…':'Loading…');
+    return loadManifest(!!forceFresh).then(function(m){
+      document.getElementById('heroImg').src = heroFromProfile(m);
       routeWith(m);
-      window.addEventListener('hashchange', function(){ routeWith(m); });
+      setStatus('OK');
     }).catch(function(e){
       err('portfolioError', e.message);
       err('travelsError', e.message);
       err('albumError', e.message);
+      setStatus('Error');
     });
   }
 
-  boot();
+  function hardRefresh(){
+    USE_BUST = true;          // force image reloads
+    cacheClearAll();          // clear local cache
+    boot(true).finally(function(){
+      // keep bust only briefly so back-to-back presses always change URL
+      setTimeout(function(){ USE_BUST = false; }, 2000);
+    });
+  }
+
+  function setupControls(){
+    // Click anywhere on header (except links) to go Home
+    document.querySelector('header').addEventListener('click', function(e){
+      if (e.target.closest('a') && !e.target.classList.contains('nav-home-area')) return;
+      location.hash = '#/';
+    });
+
+    // Handle hash changes
+    window.addEventListener('hashchange', function(){ boot(false).then(function(){ /* re-renders with cached manifest */ }); });
+
+    // Buttons
+    document.getElementById('btnRefresh').addEventListener('click', hardRefresh);
+
+    var autoEl = document.getElementById('autoToggle');
+    function setAuto(on){
+      autoEl.checked = !!on;
+      if(autoTimer){ clearInterval(autoTimer); autoTimer=null; }
+      if(on){
+        autoTimer = setInterval(hardRefresh, AUTO_INTERVAL_MS);
+      }
+    }
+    autoEl.addEventListener('change', function(){ setAuto(autoEl.checked); });
+
+    // Keyboard: R = refresh, A = toggle auto
+    window.addEventListener('keydown', function(e){
+      if(e.key==='r' || e.key==='R'){ e.preventDefault(); hardRefresh(); }
+      if(e.key==='a' || e.key==='A'){ e.preventDefault(); autoEl.checked=!autoEl.checked; autoEl.dispatchEvent(new Event('change')); }
+    });
+
+    // Enable auto if ?auto=1 in URL
+    var params = new URLSearchParams(location.search);
+    if(params.get('auto')==='1'){ setAuto(true); }
+  }
+
+  // Initial boot
+  setupControls();
+  boot(false);
 })();
 </script>
 </body>
