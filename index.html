@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>William Darlington — Portfolio & Travels</title>
+  <meta name="description" content="Photography portfolio and travel gallery" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0b0e14;
+      --panel:#0f1524;
+      --panel-2:#121a2b;
+      --muted:#94a3b8;
+      --text:#e8eefc;
+      --brand:#7c3aed;
+      --brand-2:#22d3ee;
+      --ring:rgba(124,58,237,.45);
+      --shadow:0 10px 30px rgba(0,0,0,.45);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(180deg,var(--bg),#0e1320 50%,#0a0f1d 100%);color:var(--text)}
+    a{color:inherit;text-decoration:none}
+    img{max-width:100%;display:block}
+    .container{width:min(1120px,92%);margin-inline:auto}
+
+    /* NAV */
+    header{position:sticky;top:0;z-index:50}
+    .nav-wrap{background:rgba(15,21,36,.75);backdrop-filter:saturate(140%) blur(14px);border-bottom:1px solid rgba(255,255,255,.06);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:12px 0}
+    .brand{display:flex;gap:12px;align-items:center;font-weight:800}
+    .logo{width:36px;height:36px;border-radius:12px;background:conic-gradient(from 220deg at 50% 50%,var(--brand),var(--brand-2),var(--brand));box-shadow:0 6px 20px var(--ring)}
+    .nav-links{display:flex;gap:10px;align-items:center}
+    .chip{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);transition:all .2s ease}
+    .chip:hover{background:rgba(255,255,255,.1)}
+    .pill{padding:10px 14px;border-radius:14px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#0a0a0a;font-weight:700;box-shadow:0 10px 25px var(--ring)}
+
+    /* HERO */
+    .hero{padding:78px 0 42px}
+    .hero-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:28px;align-items:center}
+    .eyebrow{letter-spacing:.16em;text-transform:uppercase;color:#93c5fd;font-weight:700;font-size:12px}
+    .hero h1{font-size:clamp(30px,5.5vw,58px);line-height:1.03;margin:0 0 16px}
+    .hero p{color:var(--muted);font-size:clamp(14px,1.7vw,18px)}
+    .cta{display:flex;gap:12px;margin-top:22px}
+    .ghost{padding:10px 14px;border-radius:14px;background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.12)}
+    .hero-card{border-radius:24px;background:radial-gradient(1200px 600px at -10% -20%,rgba(124,58,237,.35),transparent 40%),radial-gradient(800px 400px at 120% -10%,rgba(34,211,238,.25),transparent 35%),var(--panel-2);padding:18px;box-shadow:var(--shadow)}
+    .hero-card img{border-radius:18px}
+
+    /* SECTIONS */
+    section{padding:56px 0}
+    .section-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:16px}
+    .title{font-size:clamp(22px,4vw,34px);margin:6px 0 10px}
+    .lead{color:var(--muted);max-width:65ch}
+
+    /* GALLERY (Portfolio stream) */
+    .gallery{columns:4 280px;column-gap:14px}
+    .shot{break-inside:avoid;border-radius:16px;overflow:hidden;margin:0 0 14px;border:1px solid rgba(255,255,255,.06);box-shadow:var(--shadow);cursor:pointer;background:#0b1220}
+    .shot img{width:100%;height:auto;display:block}
+    .filter-row{display:flex;gap:10px;align-items:center}
+
+    /* LIGHTBOX */
+    .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px}
+    .lightbox.open{display:flex}
+    .lightbox img{max-width:min(92vw,1200px);max-height:84vh;border-radius:16px}
+    .lightbox .close{position:absolute;top:20px;right:20px}
+
+    /* TRAVELS */
+    .travel-grid{display:grid;gap:18px;grid-template-columns:repeat(12,1fr)}
+    .place{grid-column:span 4;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.06);border-radius:18px;overflow:hidden}
+    .place .banner{aspect-ratio:16/9;background:#0d1324}
+    .place .copy{padding:14px 14px 18px}
+    .place h4{margin:4px 0 6px}
+    .place p{color:var(--muted);font-size:14px}
+    @media (max-width:1000px){.place{grid-column:span 6}}
+    @media (max-width:640px){.place{grid-column:span 12}}
+
+    footer{padding:32px 0;color:var(--muted);border-top:1px solid rgba(255,255,255,.06)}
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <header>
+    <div class="nav-wrap">
+      <div class="container nav">
+        <a href="#top" class="brand"><span class="logo"></span><span>William Darlington</span></a>
+        <nav class="nav-links">
+          <a class="chip" href="#portfolio">Portfolio</a>
+          <a class="chip" href="#travels">Travels</a>
+          <a class="pill" href="#contact">Contact</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <main id="top" class="hero">
+    <div class="container hero-grid">
+      <div>
+        <div class="eyebrow">Designer · Developer · Traveler</div>
+        <h1>Building clean products and collecting messy stories.</h1>
+        <p>Welcome to my corner of the internet. Jump into the portfolio stream below, or browse trips by destination.</p>
+        <div class="cta">
+          <a class="pill" href="#portfolio">View portfolio</a>
+          <a class="ghost" href="#travels">See travels</a>
+        </div>
+      </div>
+      <div class="hero-card">
+        <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1600&auto=format&fit=crop" alt="Workspace and code" />
+      </div>
+    </div>
+  </main>
+
+  <!-- PORTFOLIO STREAM -->
+  <section id="portfolio">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Portfolio</div>
+          <h2 class="title">A running photo stream</h2>
+          <p class="lead">Put images into <code>/portfolio/</code> (main stream) and <code>/travels/</code> for destinations. Tag with <code>data-place</code> to make filters work.</p>
+        </div>
+        <div class="filter-row">
+          <button class="ghost" id="filterAny">All</button>
+          <button class="ghost" data-filter="europe">Europe</button>
+          <button class="ghost" data-filter="asia">Asia</button>
+          <button class="ghost" data-filter="americas">Americas</button>
+        </div>
+      </div>
+
+      <div class="gallery" id="gallery">
+        <figure class="shot" data-place="europe">
+          <img src="./portfolio/alps-1.jpg" alt="Alps"/>
+        </figure>
+        <figure class="shot" data-place="asia">
+          <img src="./portfolio/tokyo-1.jpg" alt="Tokyo"/>
+        </figure>
+        <figure class="shot" data-place="americas">
+          <img src="./portfolio/california-1.jpg" alt="California"/>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRAVELS -->
+  <section id="travels">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Travels</div>
+          <h2 class="title">Places I’ve visited</h2>
+          <p class="lead">Each card links back to the stream with filters applied.</p>
+        </div>
+      </div>
+      <div class="travel-grid">
+        <article class="place" data-filter="europe">
+          <img class="banner" src="./travels/paris-1.jpg" alt="Paris"/>
+          <div class="copy">
+            <h4>Swiss Alps</h4>
+            <p>Snow lines, crisp air, and fondue.</p>
+            <p><a href="#portfolio" class="ghost to-filter" data-filter="europe">View Europe shots</a></p>
+          </div>
+        </article>
+        <article class="place" data-filter="asia">
+          <img class="banner" src="./travels/tokyo-1.jpg" alt="Tokyo"/>
+          <div class="copy">
+            <h4>Tokyo</h4>
+            <p>Neon, noodles, and late-night arcades.</p>
+            <p><a href="#portfolio" class="ghost to-filter" data-filter="asia">View Asia shots</a></p>
+          </div>
+        </article>
+        <article class="place" data-filter="americas">
+          <img class="banner" src="./travels/california-1.jpg" alt="California"/>
+          <div class="copy">
+            <h4>California</h4>
+            <p>Cliffs, coastlines, and dramatic skies.</p>
+            <p><a href="#portfolio" class="ghost to-filter" data-filter="americas">View Americas shots</a></p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Contact</div>
+          <h2 class="title">Let’s work together</h2>
+          <p class="lead">Email me at <a href="mailto:you@example.com">you@example.com</a> or DM me on <a href="https://www.instagram.com/" target="_blank">Instagram</a>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <footer>
+    <div class="container">© <span id="y"></span> William Darlington · Built for GitHub Pages</div>
+  </footer>
+
+  <!-- LIGHTBOX -->
+  <div class="lightbox" id="lightbox" aria-hidden="true">
+    <button class="ghost close" aria-label="Close" id="closeLightbox">Close ✕</button>
+    <img alt="Expanded photo" id="lightboxImg" />
+  </div>
+
+  <script>
+    // Footer year
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    // Lightbox
+    const lb=document.getElementById('lightbox');const lbImg=document.getElementById('lightboxImg');
+    document.querySelectorAll('.shot img').forEach(img=>{img.addEventListener('click',()=>{lbImg.src=img.src;lb.classList.add('open');});});
+    document.getElementById('closeLightbox').addEventListener('click',()=>{lb.classList.remove('open');lbImg.removeAttribute('src');});
+    lb.addEventListener('click',e=>{if(e.target===lb){lb.classList.remove('open');lbImg.removeAttribute('src');}});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'){lb.classList.remove('open');lbImg.removeAttribute('src');}});
+
+    // Filters
+    function applyFilter(key){
+      const shots=document.querySelectorAll('#gallery .shot');
+      shots.forEach(s=>{s.style.display=(!key||s.dataset.place===key)?'block':'none';});
+    }
+    document.getElementById('filterAny').addEventListener('click',()=>applyFilter(null));
+    document.querySelectorAll('[data-filter]').forEach(btn=>{
+      btn.addEventListener('click',()=>{const key=btn.dataset.filter;if(btn.classList.contains('to-filter')){setTimeout(()=>applyFilter(key),140);}else{applyFilter(key);}});
+    });
+  </script>
+</body>
+</html>
