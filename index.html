@@ -1,36 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>William Darlington</title>
+
+  <!-- Favicon (keep PNG/ICO for widest support) -->
+  <link rel="icon" href="/favicon/user.png" sizes="32x32" />
+  <link rel="shortcut icon" href="/favicon/user.png" />
+  <meta name="theme-color" content="#0b0e14" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#0b0e14; --muted:#94a3b8; --text:#e8eefc;
+      --brand:#7c3aed; --brand-2:#22d3ee; --ring:rgba(124,58,237,.4);
+      --shadow:0 14px 40px rgba(0,0,0,.5); --radius:20px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      color:var(--text); line-height:1.55;
+      background:
+        radial-gradient(1200px 500px at 120% -10%, rgba(34,211,238,.08), transparent 60%),
+        radial-gradient(1000px 500px at -20% 10%, rgba(124,58,237,.09), transparent 60%),
+        var(--bg);
+    }
+    img,video{display:block;max-width:100%}
+    a{color:inherit;text-decoration:none}
+    .container{width:min(1200px,92%);margin-inline:auto}
+
+    /* NAV */
+    header{
+      position:sticky;top:0;z-index:50;
+      background:rgba(15,21,36,.78);
+      backdrop-filter:saturate(150%) blur(12px);
+      border-bottom:1px solid rgba(255,255,255,.08);
+      cursor:pointer;
+    }
+    .nav{display:flex;justify-content:space-between;align-items:center;padding:14px 28px;gap:12px}
+    .nav-links{display:flex;gap:12px;flex-wrap:wrap}
+    .chip{
+      padding:8px 12px;border-radius:999px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.08)
+    }
+    .pill{
+      padding:10px 16px;border-radius:14px;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      font-weight:700;color:#0a0a0a;box-shadow:0 8px 24px var(--ring)
+    }
+    /* allow links to be clickable even though header is */
+    header .nav{pointer-events:auto}
+    header .nav a.nav-home-area{position:absolute;inset:0;pointer-events:auto}
+
+    .right-controls{display:flex;gap:10px;align-items:center}
+    .toggle{display:inline-flex;align-items:center;gap:8px}
+    .toggle input{accent-color:#7c3aed;transform:scale(1.2)}
+
+    /* Mobile nav tweaks */
+    @media (max-width:560px){
+      .nav{justify-content:center;padding:10px 14px}
+      .nav-links{gap:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+      .nav-links::-webkit-scrollbar{display:none}
+      .chip,.pill{padding:8px 12px;font-size:14px}
+      .right-controls{position:fixed;right:10px;top:10px}
+    }
+
+    /* Sections + HERO */
+    section{padding:24px 0 52px}
+    .hero{display:grid;grid-template-columns:1fr 1fr;padding:64px 0;gap:32px;align-items:center}
+    @media(max-width:900px){.hero{grid-template-columns:1fr;text-align:center}}
+    .hero h1{font-size:clamp(32px,5vw,56px);font-weight:800;line-height:1.1;margin-bottom:10px}
+    .hero p{color:var(--muted)}
+    .hero-card{border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;justify-self:end;max-width:min(520px,90vw)}
+    @media(max-width:900px){.hero-card{justify-self:center}}
+    .hero-card img{width:100%;height:auto;object-fit:cover}
+
+    /* Views */
+    .hidden{display:none}
+    .view-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+    .view-head h2{font-size:clamp(24px,3vw,34px)}
+    .back{padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14)}
+
+    /* Base gallery tiles */
+    .gallery{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+      gap:18px
+    }
+    .shot{
+      border-radius:var(--radius);
+      overflow:hidden;
+      background:#111;
+      box-shadow:var(--shadow);
+      cursor:pointer
+    }
+
+    /* Fill behaviour */
+    #streamGrid .shot, #portfolioGrid .shot { aspect-ratio:16/9; }
+    #streamGrid .shot img, #streamGrid .shot video,
+    #portfolioGrid .shot img, #portfolioGrid .shot video{
+      width:100%;height:100%;object-fit:cover;background:#000;
+    }
+
+    /* Album page: preserve originals */
+    #albumGrid .shot{ aspect-ratio:auto; }
+    #albumGrid .shot img, #albumGrid .shot video{
+      width:100%;height:auto;object-fit:contain;background:#000;
+    }
+
+    .stream-grid{margin-top:12px}
+
+    /* Travel index cards */
+    .travel-grid{
+      display:grid;gap:20px;
+      grid-template-columns:repeat(auto-fill,minmax(300px,1fr))
+    }
+    .place{
+      position:relative;border-radius:var(--radius);
+      overflow:hidden;box-shadow:var(--shadow);
+      aspect-ratio:16/9;background:#000
+    }
+    .place img,.place video{
+      width:100%;height:100%;object-fit:cover;display:block;background:#000
+    }
+    .place .overlay{
+      position:absolute;inset:0;
+      background:linear-gradient(to top,rgba(0,0,0,.65),rgba(0,0,0,.08) 60%);
+      display:flex;flex-direction:column;justify-content:flex-end;padding:20px
+    }
+    .place h4{margin:0 0 6px;font-size:18px}
+    .place p{margin:0 0 10px;font-size:14px;color:var(--muted)}
+    .place a{align-self:start}
+
+    /* Footer */
+    footer{padding:28px 0;border-top:1px solid rgba(255,255,255,.08)}
+    .footer-center{display:flex;flex-direction:column;align-items:center;gap:10px}
+    .social{display:flex;gap:10px}
+
+    /* Error bar */
+    .errorbar{
+      position:fixed;left:50%;transform:translateX(-50%);
+      top:70px;z-index:60;max-width:min(1000px,92%);width:fit-content
+    }
+    .errorchip{
+      display:flex;gap:10px;align-items:center;
+      padding:10px 14px;border-radius:12px;
+      background:rgba(255,0,0,.12); color:#ffdede;
+      border:1px solid #ff8a8a; box-shadow:var(--shadow)
+    }
+    .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:#1a1f2e;padding:2px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.08)}
+  </style>
+</head>
+<body>
+<header>
+  <a class="nav-home-area" href="#/"></a>
+  <div class="nav container">
+    <nav class="nav-links">
+      <a class="chip" href="#/portfolio">Portfolio</a>
+      <a class="chip" href="#/travels">Travel</a>
+      <a class="pill" href="https://hdbot.io" target="_blank" rel="noopener">ALGOs</a>
+      <a class="chip" href="mailto:hanley.darlington@gmail.com">Contact</a>
+    </nav>
+
+    <div class="right-controls">
+      <button id="btnRefresh" class="chip" title="Hard refresh (clear cache, bust URLs)">⟳ Refresh</button>
+      <label class="toggle chip" title="Auto-refresh every 10 seconds">
+        <input type="checkbox" id="autoToggle" />
+        Auto
+      </label>
+      <span class="chip" id="statusChip" title="Status">Idle</span>
+    </div>
+  </div>
+</header>
+
+<div class="errorbar" id="errorBar" aria-live="polite"></div>
+
+<main>
+  <!-- HOME -->
+  <section id="view-home">
+    <div class="container">
+      <div class="hero">
+        <div>
+          <h1>William Darlington</h1>
+          <p>Vires in Numeris</p>
+          <p style="color:#9aa7bd;margin-top:8px;font-size:14px">Tip: press <span class="kbd">R</span> to refresh • <span class="kbd">A</span> to toggle auto</p>
+        </div>
+        <div class="hero-card">
+          <img id="heroImg" src="user.png" alt="Profile">
+        </div>
+      </div>
+
+      <div class="gallery stream-grid" id="streamGrid">
+        <p style="color:#9aa7bd">Loading photos…</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PORTFOLIO -->
+  <section id="view-portfolio" class="hidden">
+    <div class="container">
+      <div class="view-head">
+        <h2>Portfolio</h2>
+        <a class="back" href="#/">← Home</a>
+      </div>
+      <div class="gallery" id="portfolioGrid"><p style="color:#9aa7bd">Loading…</p></div>
+      <div id="portfolioError"></div>
+    </div>
+  </section>
+
+  <!-- TRAVEL INDEX -->
+  <section id="view-travels" class="hidden">
+    <div class="container">
+      <div class="view-head">
+        <h2>Travel</h2>
+        <a class="back" href="#/">← Home</a>
+      </div>
+      <div class="travel-grid" id="travelCards"><p style="color:#9aa7bd">Loading…</p></div>
+      <div id="travelsError"></div>
+    </div>
+  </section>
+
+  <!-- SINGLE TRAVEL ALBUM -->
+  <section id="view-album" class="hidden">
+    <div class="container">
+      <div class="view-head">
+        <h2 id="albumTitle">Album</h2>
+        <a class="back" href="#/travels">← All trips</a>
+      </div>
+      <div class="gallery" id="albumGrid"><p style="color:#9aa7bd">Loading…</p></div>
+      <div id="albumError"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container footer-center">
+    <div class="social">
+      <a class="chip" href="https://www.linkedin.com/in/william-darlington-736475212/" target="_blank" rel="noopener">LinkedIn</a>
+      <a class="chip" href="https://instagram.com/wi11.4m" target="_blank" rel="noopener">Instagram</a>
+    </div>
+  </div>
+</footer>
+
 <script>
 (function(){
   'use strict';
-
-  /* =======================
-     DEV SWITCH
-     ======================= */
-  var DEV_MODE = true; // ← set to false for normal behavior
 
   /* -------- Config -------- */
   var GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
   var IMG_EXT   = ['.jpg','.jpeg','.png','.webp','.gif','.avif'];
   var VIDEO_EXT = ['.mp4','.webm'];
-  var CACHE_TTL = 24 * 60 * 60 * 1000; // 24h (ignored in DEV_MODE)
-  var CACHE_VERSION = 'v1.2';          // bump to invalidate local cache in PROD
+  var CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
+  var CACHE_VERSION = 'v1.3';          // bump to invalidate local cache
+  var AUTO_INTERVAL_MS = 10000;        // 10s for testing
+  var USE_BUST = false;                // toggled on hard refresh to force image reloads
 
-  // Will be set after we fetch the latest commit
-  var CURRENT_SHA = null;
+  /* -------- Status + Errors -------- */
+  function setStatus(txt){
+    var s=document.getElementById('statusChip');
+    if(!s) return;
+    s.textContent = txt || 'Idle';
+  }
+  function showError(msg){
+    console.error(msg);
+    var bar=document.getElementById('errorBar');
+    if(!bar) return;
+    var wrap=document.createElement('div');
+    wrap.className='errorchip';
+    wrap.textContent = String(msg);
+    bar.appendChild(wrap);
+    setTimeout(function(){ if(wrap && wrap.parentNode){ wrap.parentNode.removeChild(wrap); } }, 6000);
+  }
 
-  // Header (except links) goes Home
-  document.addEventListener('DOMContentLoaded', function(){
-    var header = document.querySelector('header');
-    if (header){
-      header.addEventListener('click', function(e){
-        if (e.target.closest('a')) return;
-        location.hash = '#/';
-      });
-    }
-  });
+  /* -------- URL helpers -------- */
+  function rawURL(path){
+    var u='https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path);
+    if(USE_BUST){ u += (u.indexOf('?')===-1?'?':'&')+'bust='+(Date.now()); }
+    return u;
+  }
 
   /* -------- Utils -------- */
-  function log(){ if(DEV_MODE && console && console.debug) console.debug.apply(console, arguments); }
-
   function hasExt(name, exts){
     name = (name||'').toLowerCase();
     for (var i=0;i<exts.length;i++){
@@ -43,10 +297,8 @@
   function isVideo(n){ return hasExt(n, VIDEO_EXT); }
   function isMedia(n){ return isImg(n) || isVideo(n); }
 
-  /* -------- Cache helpers (disabled in DEV_MODE) -------- */
   function cacheKey(k){ return GH.owner+':'+GH.repo+':'+GH.ref+':'+CACHE_VERSION+':'+k; }
   function cacheGet(k){
-    if (DEV_MODE) return null; // force fresh every time
     try{
       var raw = localStorage.getItem(cacheKey(k));
       if(!raw) return null;
@@ -55,14 +307,17 @@
       return obj.data;
     }catch(e){ return null; }
   }
-  function cacheSet(k,v){
-    if (DEV_MODE) return; // no writes in dev
-    try{ localStorage.setItem(cacheKey(k), JSON.stringify({t:Date.now(), data:v})); }catch(e){}
+  function cacheSet(k,v){ try{ localStorage.setItem(cacheKey(k), JSON.stringify({t:Date.now(), data:v})); }catch(e){} }
+  function cacheClearAll(){
+    try{
+      Object.keys(localStorage).forEach(function(key){
+        if(key.indexOf(GH.owner+':'+GH.repo+':'+GH.ref+':')===0) localStorage.removeItem(key);
+      });
+    }catch(e){}
   }
 
   function fetchJSON(url){
-    log('fetchJSON:', url);
-    return fetch(url, {headers:{'Accept':'application/vnd.github+json'}, cache: 'no-store'}).then(function(r){
+    return fetch(url, {headers:{'Accept':'application/vnd.github+json','Cache-Control':'no-cache'}}).then(function(r){
       if(!r.ok){
         return r.json().catch(function(){return {message:''};}).then(function(j){
           throw new Error('HTTP '+r.status+' '+(j.message||''));
@@ -72,46 +327,7 @@
     });
   }
 
-  // raw URL builder (add cache-buster in DEV)
-  function rawURL(path){
-    var base = 'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path);
-    var v = DEV_MODE ? (CURRENT_SHA || Date.now()) : (CURRENT_SHA || CACHE_VERSION);
-    return base + '?v=' + encodeURIComponent(v);
-  }
-
-  // Simple image fallback chain: .avif -> .webp -> .jpg/.png
-  function makeImgWithFallback(src, alt){
-    var img = new Image();
-    img.alt = alt || '';
-    img.loading = 'lazy';
-    img.decoding = 'async';
-    img.src = src;
-
-    img.addEventListener('error', function(){
-      var s = img.src;
-      log('Image failed:', s);
-      if (/\.avif(\?|$)/i.test(s)){
-        img.src = s.replace(/\.avif(\?.*)?$/i, '.webp$1');
-        log(' → fallback to webp:', img.src);
-      } else if (/\.webp(\?|$)/i.test(s)){
-        img.src = s.replace(/\.webp(\?.*)?$/i, '.jpg$1');
-        log(' → fallback to jpg:', img.src);
-      } else if (/\.jpe?g(\?|$)/i.test(s)){
-        img.src = s.replace(/\.jpe?g(\?.*)?$/i, '.png$1');
-        log(' → fallback to png:', img.src);
-      }
-    });
-    return img;
-  }
-
-  function makeVideo(src){
-    var v=document.createElement('video');
-    v.src=src; v.muted=true; v.loop=true; v.autoplay=true;
-    v.playsInline=true; v.preload='metadata'; v.controls=false;
-    return v;
-  }
-
-  /* -------- Manifest building -------- */
+  /* -------- Manifest loading (max 2 API calls) -------- */
   function buildManifestFromTree(tree){
     var files = tree && tree.tree ? tree.tree : [];
     var manifest = { portfolio:[], travels:{}, profile:[] };
@@ -132,52 +348,32 @@
         manifest.profile.push(it.path);
       }
     }
-    log('Built manifest:', manifest);
     return manifest;
   }
 
-  function loadManifest(){
-    var cached = cacheGet('manifest');
-    if (cached){
-      log('Using cached manifest');
-      return Promise.resolve(cached);
+  function loadManifest(forceFresh){
+    if (!forceFresh){
+      var cached = cacheGet('manifest');
+      if (cached) return Promise.resolve(cached);
     }
 
-    // DEV: always hit live GitHub API for fresh tree
-    if (DEV_MODE){
-      log('DEV_MODE: skipping baked manifest, fetching from GitHub API');
+    // Try baked manifest first (optional)
+    return fetch('/manifest.json', {cache:'no-store'}).then(function(r){
+      if(r.ok) return r.json();
+      throw new Error('no baked manifest');
+    }).catch(function(){
+      // Fallback to GitHub API: commits -> tree
       return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
         .then(function(commit){
-          CURRENT_SHA = (commit && commit.sha) || (commit && commit.commit && commit.commit.tree && commit.commit.tree.sha) || null;
-          if (!commit || !commit.commit || !commit.commit.tree || !commit.commit.tree.sha) throw new Error('Missing tree SHA');
-          var sha = commit.commit.tree.sha;
-          log('Latest commit SHA:', CURRENT_SHA, 'Tree SHA:', sha);
+          var sha = commit && commit.commit && commit.commit.tree && commit.commit.tree.sha;
+          if (!sha) throw new Error('Missing tree SHA');
           return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+sha+'?recursive=1');
         })
         .then(buildManifestFromTree);
-    }
-
-    // PROD: try baked manifest first (versioned), then fallback to API
-    return fetch('/manifest.json?v='+encodeURIComponent(CACHE_VERSION), {cache:'no-store'})
-      .then(function(r){
-        if(r.ok) return r.json();
-        throw new Error('no baked manifest');
-      })
-      .catch(function(){
-        log('No baked manifest, falling back to GitHub API');
-        return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
-          .then(function(commit){
-            CURRENT_SHA = (commit && commit.sha) || null;
-            if (!commit || !commit.commit || !commit.commit.tree || !commit.commit.tree.sha) throw new Error('Missing tree SHA');
-            var sha = commit.commit.tree.sha;
-            return fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+sha+'?recursive=1');
-          })
-          .then(buildManifestFromTree);
-      })
-      .then(function(manifest){
-        cacheSet('manifest', manifest);
-        return manifest;
-      });
+    }).then(function(manifest){
+      cacheSet('manifest', manifest);
+      return manifest;
+    });
   }
 
   /* -------- Data helpers -------- */
@@ -212,7 +408,14 @@
 
   /* -------- DOM helpers -------- */
   function byId(id){ return document.getElementById(id); }
-  function clear(el){ while(el && el.firstChild) el.removeChild(el.firstChild); }
+  function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
+
+  function makeVideo(src){
+    var v=document.createElement('video');
+    v.src=src; v.muted=true; v.loop=true; v.autoplay=true;
+    v.playsInline=true; v.preload='metadata'; v.controls=false;
+    return v;
+  }
 
   function mountGrid(elId, files, onClick){
     var el=byId(elId); clear(el);
@@ -229,7 +432,7 @@
           if(onClick){ fig.addEventListener('click', function(){ onClick(f); }); }
           fig.appendChild(v);
         }else{
-          var img=makeImgWithFallback(f.src, f.alt);
+          var img=new Image(); img.src=f.src; img.alt=f.alt; img.loading='lazy'; img.decoding='async';
           if(onClick){ img.addEventListener('click', function(){ onClick(f); }); }
           fig.appendChild(img);
         }
@@ -246,27 +449,25 @@
     chip.style.borderColor='#ff8a8a'; chip.style.background='rgba(255,0,0,.12)'; chip.style.color='#ffdede';
     chip.appendChild(document.createTextNode(msg));
     clear(el); el.appendChild(chip);
+    showError(msg);
   }
 
   /* -------- Router -------- */
-  var views={};
-  function initViews(){
-    views={
-      home:byId('view-home'),
-      portfolio:byId('view-portfolio'),
-      travels:byId('view-travels'),
-      album:byId('view-album')
-    };
-  }
+  var views={
+    home:byId('view-home'),
+    portfolio:byId('view-portfolio'),
+    travels:byId('view-travels'),
+    album:byId('view-album')
+  };
   function show(name){
-    for(var k in views){ if(views.hasOwnProperty(k) && views[k]) views[k].classList.add('hidden'); }
-    if (views[name]) views[name].classList.remove('hidden');
+    for(var k in views){ if(views.hasOwnProperty(k)) views[k].classList.add('hidden'); }
+    views[name].classList.remove('hidden');
     window.scrollTo(0,0);
   }
 
   function routeWith(m){
-    var h=(location.hash||'').replace(/^#/, '');
-    log('Route:', h);
+    var h=(location.hash||'#/').replace(/^#/, '');
+    if(h==='') h='/';
 
     if(h.indexOf('/portfolio')===0){
       show('portfolio');
@@ -275,7 +476,7 @@
       return;
     }
 
-    if(h.indexOf('/travels')===0 && h.split('/').length<=2){
+    if(h.indexOf('/travels')===0 && h.indexOf('/travel/')!==0){
       show('travels');
       try{
         var all=listTravelAll(m), groups={};
@@ -289,7 +490,7 @@
           if(files[0].type==='video'){
             card.appendChild(makeVideo(files[0].src));
           }else{
-            var img=makeImgWithFallback(files[0].src, folder);
+            var img=new Image(); img.src=files[0].src; img.alt=folder; img.loading='lazy';
             card.appendChild(img);
           }
           var ov=document.createElement('div'); ov.className='overlay';
@@ -331,40 +532,74 @@
       d.style.borderColor='#ff8a8a'; d.style.background='rgba(255,0,0,.12)'; d.style.color='#ffdede';
       d.appendChild(document.createTextNode(e.message));
       el.appendChild(d);
+      showError(e.message);
     }
   }
 
-  /* -------- Boot -------- */
-  function boot(){
-    initViews();
-    if (DEV_MODE){
-      // Optional: clear any stale keys for this app prefix
-      try{
-        var prefix = GH.owner+':'+GH.repo+':'+GH.ref+':';
-        for (var i=localStorage.length-1;i>=0;i--){
-          var k = localStorage.key(i);
-          if (k && k.indexOf(prefix) === 0){
-            localStorage.removeItem(k);
-          }
-        }
-        log('DEV_MODE: cleared localStorage keys with prefix', prefix);
-      }catch(e){}
-    }
+  /* -------- Boot + Refresh -------- */
+  var autoTimer=null;
 
-    loadManifest().then(function(m){
-      var hero = document.getElementById('heroImg');
-      if (hero) hero.src = heroFromProfile(m);
+  function boot(forceFresh){
+    setStatus(forceFresh?'Refreshing…':'Loading…');
+    return loadManifest(!!forceFresh).then(function(m){
+      document.getElementById('heroImg').src = heroFromProfile(m);
       routeWith(m);
-      window.addEventListener('hashchange', function(){ routeWith(m); });
+      setStatus('OK');
     }).catch(function(e){
-      log('Boot error:', e);
-      err('portfolioError', e.message || String(e));
-      err('travelsError', e.message || String(e));
-      err('albumError', e.message || String(e));
+      err('portfolioError', e.message);
+      err('travelsError', e.message);
+      err('albumError', e.message);
+      setStatus('Error');
     });
   }
 
-  // Start
-  boot();
+  function hardRefresh(){
+    USE_BUST = true;          // force image reloads
+    cacheClearAll();          // clear local cache
+    boot(true).finally(function(){
+      // keep bust only briefly so back-to-back presses always change URL
+      setTimeout(function(){ USE_BUST = false; }, 2000);
+    });
+  }
+
+  function setupControls(){
+    // Click anywhere on header (except links) to go Home
+    document.querySelector('header').addEventListener('click', function(e){
+      if (e.target.closest('a') && !e.target.classList.contains('nav-home-area')) return;
+      location.hash = '#/';
+    });
+
+    // Handle hash changes
+    window.addEventListener('hashchange', function(){ boot(false).then(function(){ /* re-renders with cached manifest */ }); });
+
+    // Buttons
+    document.getElementById('btnRefresh').addEventListener('click', hardRefresh);
+
+    var autoEl = document.getElementById('autoToggle');
+    function setAuto(on){
+      autoEl.checked = !!on;
+      if(autoTimer){ clearInterval(autoTimer); autoTimer=null; }
+      if(on){
+        autoTimer = setInterval(hardRefresh, AUTO_INTERVAL_MS);
+      }
+    }
+    autoEl.addEventListener('change', function(){ setAuto(autoEl.checked); });
+
+    // Keyboard: R = refresh, A = toggle auto
+    window.addEventListener('keydown', function(e){
+      if(e.key==='r' || e.key==='R'){ e.preventDefault(); hardRefresh(); }
+      if(e.key==='a' || e.key==='A'){ e.preventDefault(); autoEl.checked=!autoEl.checked; autoEl.dispatchEvent(new Event('change')); }
+    });
+
+    // Enable auto if ?auto=1 in URL
+    var params = new URLSearchParams(location.search);
+    if(params.get('auto')==='1'){ setAuto(true); }
+  }
+
+  // Initial boot
+  setupControls();
+  boot(false);
 })();
 </script>
+</body>
+</html>
