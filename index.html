@@ -31,13 +31,18 @@
     a{color:inherit;text-decoration:none}
     .container{width:min(1200px,92%);margin-inline:auto}
 
+    /* Header (clickable to Home) */
     header{
-      position:sticky;top:0;z-index:50;
+      position:sticky;
+      top:0;
+      z-index:9999;
       background:rgba(15,21,36,.78);
       backdrop-filter:saturate(150%) blur(12px);
       border-bottom:1px solid rgba(255,255,255,.08);
       cursor:pointer;
+      isolation:isolate; /* prevent overlaps blocking it */
     }
+
     .nav{display:flex;justify-content:flex-end;align-items:center;padding:14px 28px;gap:12px}
     .nav-links{display:flex;gap:12px;flex-wrap:wrap}
     .chip{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)}
@@ -113,6 +118,18 @@
     </nav>
   </div>
 </header>
+
+<script>
+  // Make header clickable for Home
+  (function(){
+    var hdr = document.querySelector('header');
+    if(!hdr) return;
+    hdr.addEventListener('click', function(e){
+      if(e.target.closest('a')) return; // don’t block links
+      location.hash = '#/';
+    }, true);
+  })();
+</script>
 
 <main>
   <section id="view-home">
