@@ -232,10 +232,10 @@
   var CACHE_TTL = 24 * 60 * 60 * 1000; 
   var CACHE_VERSION = 'v1.2';          
 
-  // raw URL builder (no API for file bytes)
-  function rawURL(path){
-    return 'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path);
-  }
+function rawURL(path){
+  // add ?v=timestamp to force fresh fetch in the browser
+  return 'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path) + '?v=' + Date.now();
+}
 
   // Header (except links) goes Home
   document.querySelector('header').addEventListener('click', function(e){
