@@ -193,7 +193,7 @@
   function isImg(n){return hasExt(n,IMG_EXT);} function isVideo(n){return hasExt(n,VIDEO_EXT);} function isMedia(n){return isImg(n)||isVideo(n);}
   function cacheGet(){return null;} function cacheSet(){}
 
-  // NEW: helper to check if the basename (without extension) ends with a token
+  // helper: basename (without extension) must end with a token
   function endsWithToken(path, token){
     var base = (path||'').split('/').pop().toLowerCase();
     var dot = base.lastIndexOf('.');
@@ -203,14 +203,13 @@
 
   function fetchJSON(url){return fetch(url,{headers:{'Accept':'application/vnd.github+json'}}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
 
-  // CHANGED: only include media whose basename ends with "star"
+  // include ALL media in the manifest (no filtering here)
   function buildManifestFromTree(tree){
     var f=tree&&tree.tree?tree.tree:[];
     var m={portfolio:[],travels:{},profile:[]};
     for(var i=0;i<f.length;i++){
       var it=f[i];
       if(it.type!=='blob'||!isMedia(it.path)) continue;
-      if(!endsWithToken(it.path,'star')) continue; // require *star before extension
       if(it.path.startsWith('portfolio/')) m.portfolio.push(it.path);
       else if(it.path.startsWith('travels/')){
         var parts=it.path.split('/');
@@ -228,7 +227,13 @@
   function listPortfolio(m){return m.portfolio.map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));}
   function listTravelAll(m){var out=[];for(var f in m.travels){m.travels[f].forEach(p=>out.push({src:rawURL(p),alt:p.split('/').pop(),folder:f,type:isVideo(p)?'video':'image'}));}return out;}
   function listAlbum(m,folder){return (m.travels[folder]||[]).map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));}
-  function heroFromProfile(m){var pics=m.profile.filter(isImg);return pics.length?rawURL(pics[0]):'user.png';}
+
+  // hero prefers profile image ending in *star, else falls back
+  function heroFromProfile(m){
+    var pics=m.profile.filter(isImg);
+    var starPic = pics.find(function(p){ return endsWithToken(p,'star'); });
+    return starPic ? rawURL(starPic) : (pics.length ? rawURL(pics[0]) : 'user.png');
+  }
 
   function byId(id){return document.getElementById(id);} function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
   function makeVideo(src){var v=document.createElement('video');v.src=src;v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.controls=false;return v;}
@@ -243,15 +248,53 @@
   var views={home:byId('view-home'),portfolio:byId('view-portfolio'),travels:byId('view-travels'),album:byId('view-album')};
   function show(v){Object.values(views).forEach(x=>x.classList.add('hidden'));views[v].classList.remove('hidden');scrollTo(0,0);}
 
-  function routeWith(m){var h=(location.hash||'').slice(1);
-    if(h.startsWith('/portfolio')){show('portfolio');mountGrid('portfolioGrid',listPortfolio(m),openLightbox);return;}
-    if(h.startsWith('/travels')){show('travels');var g={};listTravelAll(m).forEach(f=>(g[f.folder]||(g[f.folder]=[])).push(f));var wrap=byId('travelCards');clear(wrap);for(var folder in g){var files=g[folder];var card=document.createElement('article');card.className='place';
-      // CHANGED: prefer a file whose basename ends with "chosenstar" for the banner
-      var banner = files.find(function(f){ return endsWithToken(f.alt,'chosenstar'); }) || files[0];
-      card.appendChild(banner.type==='video'?makeVideo(banner.src):Object.assign(new Image(),{src:banner.src,alt:folder}));
-      var ov=document.createElement('div');ov.className='overlay';ov.innerHTML='<h4>'+folder+'</h4><p>'+files.length+' files</p><a class="chip" href="#/travel/'+encodeURIComponent(folder)+'">View</a>';card.appendChild(ov);wrap.appendChild(card);}return;}
-    if(h.startsWith('/travel/')){var folder=decodeURIComponent(h.split('/')[2]);show('album');byId('albumTitle').textContent=folder;mountGrid('albumGrid',listAlbum(m,folder),openLightbox);return;}
-    show('home');var all=[...listPortfolio(m),...listTravelAll(m)];mountGrid('streamGrid',all.slice(0,12),f=>{if(f.folder)location.hash='#/travel/'+encodeURIComponent(f.folder);else location.hash='#/portfolio';});
+  function routeWith(m){
+    var h=(location.hash||'').slice(1);
+
+    if(h.startsWith('/portfolio')){
+      show('portfolio');
+      // show ALL portfolio media
+      mountGrid('portfolioGrid',listPortfolio(m),openLightbox);
+      return;
+    }
+
+    if(h.startsWith('/travels')){
+      show('travels');
+      var g={};
+      listTravelAll(m).forEach(f=>(g[f.folder]||(g[f.folder]=[])).push(f));
+      var wrap=byId('travelCards');clear(wrap);
+      for(var folder in g){
+        var files=g[folder]; // ALL files in this folder
+        var card=document.createElement('article');card.className='place';
+        // prefer *chosenstar, else any *star, else first file
+        var chosen = files.find(function(f){ return endsWithToken(f.alt,'chosenstar'); });
+        var starred = chosen || files.find(function(f){ return endsWithToken(f.alt,'star'); }) || files[0];
+        card.appendChild(starred.type==='video'?makeVideo(starred.src):Object.assign(new Image(),{src:starred.src,alt:folder}));
+        var ov=document.createElement('div');ov.className='overlay';
+        ov.innerHTML='<h4>'+folder+'</h4><p>'+files.length+' files</p><a class="chip" href="#/travel/'+encodeURIComponent(folder)+'">View</a>';
+        card.appendChild(ov);
+        wrap.appendChild(card);
+      }
+      return;
+    }
+
+    if(h.startsWith('/travel/')){
+      var folder=decodeURIComponent(h.split('/')[2]);
+      show('album');byId('albumTitle').textContent=folder;
+      // show ALL files within the folder
+      mountGrid('albumGrid',listAlbum(m,folder),openLightbox);
+      return;
+    }
+
+    // HOME: show only *star items in the stream (mixed), fallback to all if none
+    show('home');
+    var all=[...listPortfolio(m),...listTravelAll(m)];
+    var starredOnly = all.filter(function(f){ return endsWithToken(f.alt,'star'); });
+    var stream = (starredOnly.length ? starredOnly : all).slice(0,12);
+    mountGrid('streamGrid',stream, function(f){
+      if(f.folder) location.hash='#/travel/'+encodeURIComponent(f.folder);
+      else location.hash='#/portfolio';
+    });
   }
 
   function boot(){setupLightbox();loadManifest().then(m=>{byId('heroImg').src=heroFromProfile(m);routeWith(m);window.addEventListener('hashchange',()=>routeWith(m));});}
