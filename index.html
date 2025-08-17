@@ -228,8 +228,9 @@
   var GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
   var IMG_EXT   = ['.jpg','.jpeg','.png','.webp','.gif','.avif'];
   var VIDEO_EXT = ['.mp4','.webm'];
-  var CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
-  var CACHE_VERSION = 'v1.2';          // bump to invalidate local cache
+  // TTL + version left here, but not used anymore while cache is disabled
+  var CACHE_TTL = 24 * 60 * 60 * 1000; 
+  var CACHE_VERSION = 'v1.2';          
 
   // raw URL builder (no API for file bytes)
   function rawURL(path){
@@ -255,17 +256,10 @@
   function isVideo(n){ return hasExt(n, VIDEO_EXT); }
   function isMedia(n){ return isImg(n) || isVideo(n); }
 
-  function cacheKey(k){ return GH.owner+':'+GH.repo+':'+GH.ref+':'+CACHE_VERSION+':'+k; }
-  function cacheGet(k){
-    try{
-      var raw = localStorage.getItem(cacheKey(k));
-      if(!raw) return null;
-      var obj = JSON.parse(raw);
-      if(Date.now() - obj.t > CACHE_TTL) return null;
-      return obj.data;
-    }catch(e){ return null; }
-  }
-  function cacheSet(k,v){ try{ localStorage.setItem(cacheKey(k), JSON.stringify({t:Date.now(), data:v})); }catch(e){} }
+  // 🔴 Disable cache completely for live testing
+  function cacheKey(k){ return k; }
+  function cacheGet(k){ return null; }     // always miss cache
+  function cacheSet(k,v){}                 // do nothing
 
   function fetchJSON(url){
     return fetch(url, {headers:{'Accept':'application/vnd.github+json'}}).then(function(r){
