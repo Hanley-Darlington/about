@@ -17,7 +17,7 @@
       --bg:#0b0e14; --muted:#94a3b8; --text:#e8eefc;
       --brand:#7c3aed; --brand-2:#22d3ee; --ring:rgba(124,58,237,.4);
       --shadow:0 14px 40px rgba(0,0,0,.5); --radius:20px;
-      --home-spacer: 400px; /* height of the blank area under the hero on desktop */
+      --home-spacer: 400px;
     }
     *{box-sizing:border-box;margin:0;padding:0}
     body{
@@ -32,7 +32,6 @@
     a{color:inherit;text-decoration:none}
     .container{width:min(1200px,92%);margin-inline:auto}
 
-    /* Header (clickable to Home) */
     header{
       position:sticky; top:0; z-index:9999;
       background:rgba(15,21,36,.78);
@@ -40,10 +39,6 @@
       border-bottom:1px solid rgba(255,255,255,.08);
       cursor:pointer; isolation:isolate;
     }
-
-    /* Make the animation wrapper ignore pointer events so the tile gets the click */
-    .anim-wrap{ pointer-events: none; }
-    .anim-wrap .shot{ pointer-events: auto; }
 
     .nav{display:flex;justify-content:flex-end;align-items:center;padding:14px 28px;gap:12px}
     .nav-links{display:flex;gap:12px;flex-wrap:wrap}
@@ -97,32 +92,28 @@
     .footer-center{display:flex;flex-direction:column;align-items:center;gap:10px}
     .social{display:flex;gap:10px}
 
-    /* Hover (desktop) */
     @media (hover:hover) and (pointer:fine){
       .shot{transition: transform .18s ease, box-shadow .18s ease;will-change: transform;}
       .shot:hover{transform: translateY(-4px) scale(1.02);box-shadow: 0 20px 50px rgba(0,0,0,.6);}
       .shot:focus-visible{outline: 2px solid var(--brand);outline-offset: 2px;}
     }
 
-    .lightbox{position: fixed; inset: 0; z-index: 100;display: none; align-items: center; justify-content: center;background: rgba(0,0,0,.82); padding: 20px;}
+    /* Lightbox above sticky header */
+    .lightbox{position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center;background: rgba(0,0,0,.82); padding: 20px;}
     .lightbox.open{ display: flex; }
     .lightbox img, .lightbox video{max-width: min(1200px, 95vw);max-height: 90vh;border-radius: 16px;box-shadow: var(--shadow);background:#000;}
     .lightbox .close{position: absolute; top: 14px; right: 14px;padding: 8px 12px; border-radius: 999px;background: rgba(255,255,255,.12);border: 1px solid rgba(255,255,255,.18);color: #fff; cursor: pointer;}
 
-    /* ---------- Desktop-only blank space under hero ---------- */
     .home-spacer{display:none;}
     @media (hover:hover) and (pointer:fine){
       .home-spacer{display:block;height:var(--home-spacer);}
+      #streamGrid{ display:none; }
+      #streamGrid.is-on{ display:grid; }
     }
 
-    /* Prevent first-paint flash of the home grid on desktop */
-    @media (hover:hover) and (pointer:fine){
-      #streamGrid{ display:none; }          /* hidden at first paint */
-      #streamGrid.is-on{ display:grid; }    /* JS enables this */
-    }
-
-    /* ---------- Lightweight AOS-like animations (slower) ---------- */
-    .anim-wrap{display:block;will-change:transform,opacity}
+    /* Animation */
+    .anim-wrap{display:block;will-change:transform,opacity; pointer-events:none;} /* don't block clicks */
+    .anim-wrap .shot{pointer-events:auto;}
     .anim-play.zoom-in        {animation:zin 1.2s ease-out both}
     .anim-play.zoom-in-up     {animation:zinUp 1.2s ease-out both}
     .anim-play.zoom-in-down   {animation:zinDown 1.2s ease-out both}
@@ -157,12 +148,11 @@
 </header>
 
 <script>
-  // Make header clickable for Home
   (function(){
     var hdr = document.querySelector('header');
     if(!hdr) return;
     hdr.addEventListener('click', function(e){
-      if(e.target.closest('a')) return; // don’t block links
+      if(e.target.closest('a')) return;
       location.hash = '#/';
     }, true);
   })();
@@ -176,9 +166,7 @@
         <div class="hero-card"><img id="heroImg" alt="Profile"></div>
       </div>
 
-      <!-- Blank area that will be filled by the gallery when you reach the bottom -->
       <div class="home-spacer" id="homeSpacer" aria-hidden="true"></div>
-
       <div class="gallery stream-grid" id="streamGrid"></div>
     </div>
   </section>
@@ -274,21 +262,18 @@
     return new Promise(function(resolve){
       var mp4 = '/homepage/'+i+'.mp4';
       var webp = '/homepage/'+i+'.webp';
-
       var v = document.createElement('video');
-      v.preload = 'metadata';
-      v.src = mp4;
+      v.preload = 'metadata'; v.src = mp4;
 
       function ok(){ resolve({type:'video', src:mp4, alt:'home-'+i}); cleanup(); }
       function fail(){
         var img = new Image();
         img.src = webp;
         img.onload  = function(){ resolve({type:'image', src:webp, alt:'home-'+i}); };
-        img.onerror = function(){ resolve({type:'image', src:webp, alt:'home-'+i}); }; // last resort
+        img.onerror = function(){ resolve({type:'image', src:webp, alt:'home-'+i}); };
         cleanup();
       }
       function cleanup(){ v.onloadeddata = v.onerror = null; v.removeAttribute('src'); v.load(); }
-
       v.onloadeddata = ok;
       v.onerror = fail;
     });
@@ -322,7 +307,7 @@
     return el;
   }
 
-  // Home grid with animation wrapper (hover remains on .shot)
+  // Home grid with animation wrapper (adds data-* so clicks can be delegated)
   function mountHomeGrid(id,files){
     var el=byId(id); clear(el);
     var animOrder = [
@@ -333,6 +318,9 @@
     files.forEach(function(f,idx){
       var wrap = document.createElement('div'); wrap.className='anim-wrap '+animOrder[idx];
       var fig=document.createElement('figure'); fig.className='shot';
+      fig.dataset.type = f.type;
+      fig.dataset.src  = f.src;
+      fig.dataset.alt  = f.alt || ('home-'+(idx+1));
       if(f.type==='video'){
         var v=document.createElement('video');
         v.src=f.src; v.muted=true; v.loop=true; v.autoplay=true; v.playsInline=true; v.controls=false;
@@ -341,7 +329,6 @@
         var img=Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'});
         fig.appendChild(img);
       }
-      fig.addEventListener('click', ()=>openLightbox(f));
       wrap.appendChild(fig); el.appendChild(wrap);
     });
     return el;
@@ -357,7 +344,7 @@
   function openLightbox(f){
     lightboxEl.innerHTML='<button class="close">✕</button>';
     if(f.type==='video'){var v=makeVideo(f.src);v.controls=true;lightboxEl.appendChild(v);}
-    else{var img=new Image();img.src=f.src;img.alt=f.alt;lightboxEl.appendChild(img);}
+    else{var img=new Image();img.src=f.src;img.alt=f.alt||'';lightboxEl.appendChild(img);}
     lightboxEl.classList.add('open');
   }
   function closeLightbox(){lightboxEl.classList.remove('open');}
@@ -365,10 +352,9 @@
   var views={home:byId('view-home'),portfolio:byId('view-portfolio'),travels:byId('view-travels'),album:byId('view-album')};
   function show(v){Object.values(views).forEach(x=>x.classList.add('hidden'));views[v].classList.remove('hidden');scrollTo(0,0);}
 
-  /* ---------- Desktop scroll-to-bottom toggle ---------- */
+  /* Desktop scroll-to-bottom toggle */
   var homeScrollHandler=null, animEnabled=false;
-  var ROW_STAGGER = 250;  // ms between rows (slower)
-  var COL_STAGGER = 100;   // ms between cols (slower)
+  var ROW_STAGGER = 250, COL_STAGGER = 100;
 
   function atBottom(){
     var doc = document.documentElement;
@@ -379,10 +365,9 @@
     if(animEnabled) return;
     var spacer = byId('homeSpacer');
     if(spacer) spacer.style.display='none';
-    gridEl.classList.add('is-on'); // show via class (prevents first-paint flash)
-
+    gridEl.classList.add('is-on');
     gridEl.querySelectorAll('.anim-wrap').forEach(function(w,i){
-      w.classList.remove('anim-play'); void w.offsetWidth; // restart
+      w.classList.remove('anim-play'); void w.offsetWidth;
       w.style.animationDelay = (Math.floor(i/4)*ROW_STAGGER + (i%4)*COL_STAGGER)+'ms';
       w.classList.add('anim-play');
     });
@@ -391,7 +376,7 @@
 
   function disableHome(gridEl){
     var spacer = byId('homeSpacer'); if(spacer) spacer.style.display='';
-    gridEl.classList.remove('is-on'); // hide immediately
+    gridEl.classList.remove('is-on');
     if(!animEnabled) return;
     gridEl.querySelectorAll('.anim-wrap').forEach(function(w){
       w.classList.remove('anim-play');
@@ -401,12 +386,11 @@
   }
 
   function installHomeBottomToggle(gridEl){
-    if(!isDesktop){ // mobile: show grid, no animations
+    if(!isDesktop){
       byId('homeSpacer').style.display='none';
       gridEl.classList.add('is-on');
       return;
     }
-    // start with blank space + hidden grid
     disableHome(gridEl);
     function onScroll(){
       if(atBottom()) enableHome(gridEl);
@@ -414,7 +398,7 @@
     }
     homeScrollHandler = onScroll;
     window.addEventListener('scroll', onScroll, {passive:true});
-    onScroll(); // initial state
+    onScroll();
   }
   function uninstallHomeBottomToggle(gridEl){
     if(homeScrollHandler){ window.removeEventListener('scroll', homeScrollHandler); homeScrollHandler=null; }
@@ -422,7 +406,6 @@
     if(gridEl){ gridEl.classList.add('is-on'); gridEl.querySelectorAll('.anim-wrap').forEach(w=>w.classList.remove('anim-play')); }
     animEnabled=false;
   }
-  /* ---------------------------------------------------- */
 
   function routeWith(m){
     var h=(location.hash||'').slice(1);
@@ -457,7 +440,7 @@
       uninstallHomeBottomToggle();
       var folder=decodeURIComponent(h.split('/')[2]);
       show('album'); byId('albumTitle').textContent=folder;
-      mountGrid('albumGrid',listAlbum(m,folder));
+      mountGrid('albumGrid',listAlbum(m,folder),openLightbox);
       return;
     }
 
@@ -465,15 +448,23 @@
     show('home');
     uninstallHomeBottomToggle();
 
-    // Build mixed mp4/webp list, then mount and hook scroll
     listHomepageMixed().then(function(files){
       var gridEl = mountHomeGrid('streamGrid', files);
+
+      /* One click handler for all tiles (opens full quality) */
+      gridEl.addEventListener('click', function(e){
+        var tile = e.target.closest('.shot');
+        if(!tile) return;
+        openLightbox({ type: tile.dataset.type, src: tile.dataset.src, alt: tile.dataset.alt });
+      });
+
       installHomeBottomToggle(gridEl);
     });
+
+    // hero image
   }
 
   function boot(){
-    // lightbox
     (function setupLightbox(){
       var lightboxEl=document.getElementById('lightbox');
       lightboxEl.addEventListener('click',e=>{ if(e.target===lightboxEl||e.target.classList.contains('close')) lightboxEl.classList.remove('open'); });
