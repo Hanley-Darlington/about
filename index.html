@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Preload the hero image (no cache changes) -->
+  <!-- Preload the hero image -->
   <link rel="preload" as="image" href="/profile/profile-star.webp" fetchpriority="high" />
 
   <!-- AOS (Animate On Scroll) -->
@@ -37,10 +37,9 @@
     a{color:inherit;text-decoration:none}
     .container{width:min(1200px,92%);margin-inline:auto}
 
-    /* Hide AOS targets until we actually enable animations */
+    /* Hide AOS until ready */
     body:not(.aos-ready) [data-aos]{opacity:0}
 
-    /* Header (clickable to Home) */
     header{
       position:sticky; top:0; z-index:9999;
       background:rgba(15,21,36,.78);
@@ -71,31 +70,11 @@
     .hero-card img{width:100%;height:auto;object-fit:cover}
 
     .hidden{display:none}
-    .view-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
-    .view-head h2{font-size:clamp(24px,3vw,34px)}
-    .back{padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14)}
-
     .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px}
     .shot{border-radius:var(--radius);overflow:hidden;background:#111;box-shadow:var(--shadow);cursor:pointer}
 
-    #streamGrid .shot, #portfolioGrid .shot { aspect-ratio:16/9; }
-    #streamGrid .shot img, #streamGrid .shot video,
-    #portfolioGrid .shot img, #portfolioGrid .shot video{
-      width:100%;height:100%;object-fit:cover;background:#000;
-    }
-    #albumGrid { align-items: start; }
-    #albumGrid .shot { aspect-ratio:16/9; }
-    #albumGrid .shot img, #albumGrid .shot video{
-      width:100%;height:100%;object-fit:cover;background:#000;
-    }
-
-    .travel-grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
-    .place{position:relative;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);aspect-ratio:16/9;background:#000}
-    .place img,.place video{width:100%;height:100%;object-fit:cover;display:block;background:#000}
-    .place .overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.65),rgba(0,0,0,.08) 60%);display:flex;flex-direction:column;justify-content:flex-end;padding:20px}
-    .place h4{margin:0 0 6px;font-size:18px}
-    .place p{margin:0 0 10px;font-size:14px;color:var(--muted)}
-    .place a{align-self:start}
+    #streamGrid .shot{aspect-ratio:16/9;}
+    #streamGrid .shot img{width:100%;height:100%;object-fit:cover;background:#000;}
 
     footer{padding:28px 0;border-top:1px solid rgba(255,255,255,.08)}
     .footer-center{display:flex;flex-direction:column;align-items:center;gap:10px}
@@ -109,7 +88,7 @@
 
     .lightbox{position: fixed; inset: 0; z-index: 100;display: none; align-items: center; justify-content: center;background: rgba(0,0,0,.82); padding: 20px;}
     .lightbox.open{ display: flex; }
-    .lightbox img, .lightbox video{max-width: min(1200px, 95vw);max-height: 90vh;border-radius: 16px;box-shadow: var(--shadow);background:#000;}
+    .lightbox img{max-width: min(1200px, 95vw);max-height: 90vh;border-radius: 16px;box-shadow: var(--shadow);background:#000;}
     .lightbox .close{position: absolute; top: 14px; right: 14px;padding: 8px 12px; border-radius: 999px;background: rgba(255,255,255,.12);border: 1px solid rgba(255,255,255,.18);color: #fff; cursor: pointer;}
   </style>
 </head>
@@ -117,6 +96,7 @@
 <header>
   <div class="nav container">
     <nav class="nav-links">
+      <a class="chip" href="#/">Home</a>
       <a class="chip" href="#/portfolio">Portfolio</a>
       <a class="chip" href="#/travels">Travel</a>
       <a class="pill" href="https://hdbot.io" target="_blank" rel="noopener">ALGOs</a>
@@ -125,59 +105,17 @@
   </div>
 </header>
 
-<script>
-  // Make header clickable for Home
-  (function(){
-    const hdr = document.querySelector('header');
-    if(!hdr) return;
-    hdr.addEventListener('click', (e)=>{
-      if(e.target.closest('a')) return; // don’t block links
-      location.hash = '#/';
-    }, true);
-  })();
-</script>
-
 <main>
   <section id="view-home">
     <div class="container">
       <div class="hero">
         <div><h1>William Darlington</h1><p>Vires in Numeris</p><p>All Visuals are Authentic</p></div>
-        <!-- load hero immediately -->
         <div class="hero-card">
           <img id="heroImg" src="/profile/profile-star.webp" alt="Profile" width="520" height="520" fetchpriority="high" loading="eager" decoding="async">
         </div>
       </div>
-
-      <div class="gallery stream-grid" id="streamGrid">
-        <p style="color:#9aa7bd">Loading photos…</p>
-      </div>
-
-      <!-- Sentinel: when this hits the viewport, enable AOS -->
+      <div class="gallery stream-grid" id="streamGrid"></div>
       <div id="home-bottom-sentinel" style="height:1px"></div>
-    </div>
-  </section>
-
-  <section id="view-portfolio" class="hidden">
-    <div class="container">
-      <div class="view-head"><h2>Portfolio</h2><a class="back" href="#/">← Home</a></div>
-      <div class="gallery" id="portfolioGrid"><p style="color:#9aa7bd">Loading…</p></div>
-      <div id="portfolioError"></div>
-    </div>
-  </section>
-
-  <section id="view-travels" class="hidden">
-    <div class="container">
-      <div class="view-head"><h2>Travel</h2><a class="back" href="#/">← Home</a></div>
-      <div class="travel-grid" id="travelCards"><p style="color:#9aa7bd">Loading…</p></div>
-      <div id="travelsError"></div>
-    </div>
-  </section>
-
-  <section id="view-album" class="hidden">
-    <div class="container">
-      <div class="view-head"><h2 id="albumTitle">Album</h2><a class="back" href="#/travels">← All trips</a></div>
-      <div class="gallery" id="albumGrid"><p style="color:#9aa7bd">Loading…</p></div>
-      <div id="albumError"></div>
     </div>
   </section>
 </main>
@@ -195,229 +133,71 @@
   <button class="close" aria-label="Close">✕</button>
 </div>
 
-<!-- AOS JS -->
 <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
 
 <script>
 (()=>{
-  'use strict';
-
-  /* ---------- small, reusable helpers ---------- */
-  const GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
-  const IMG_EXT=['.jpg','.jpeg','.png','.webp','.gif','.avif'];
-  const VIDEO_EXT=['.mp4','.webm'];
-  const $ = (id)=>document.getElementById(id);
+  const $ = id=>document.getElementById(id);
   const isMobile = ()=> window.matchMedia('(max-width:700px)').matches;
 
-  const hasExt = (n, exts)=>{
-    n=(n||'').toLowerCase();
-    for(let i=0;i<exts.length;i++) if(n.endsWith(exts[i])) return true;
-    return false;
-  };
-  const isImg   = (n)=>hasExt(n,IMG_EXT);
-  const isVideo = (n)=>hasExt(n,VIDEO_EXT);
-  const isMedia = (n)=>isImg(n)||isVideo(n);
-
-  const rawURL = (path)=> 'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path)+'?v='+Date.now();
-
-  const endsWithToken = (path, token)=>{
-    const base=(path||'').split('/').pop().toLowerCase();
-    const dot = base.lastIndexOf('.');
-    const name = dot>=0 ? base.slice(0,dot) : base;
-    return name.endsWith(String(token).toLowerCase());
-  };
-
-  const fetchJSON = (url)=> fetch(url,{headers:{'Accept':'application/vnd.github+json'}})
-    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
-
-  /* ---------- manifest ---------- */
-  const buildManifestFromTree = (tree)=>{
-    const f = tree && tree.tree ? tree.tree : [];
-    const m = { portfolio:[], travels:{}, profile:[] };
-    for(let i=0;i<f.length;i++){
-      const it=f[i];
-      if(it.type!=='blob' || !isMedia(it.path)) continue;
-      if(it.path.startsWith('portfolio/')) m.portfolio.push(it.path);
-      else if(it.path.startsWith('travels/')){
-        const parts=it.path.split('/');
-        if(parts.length>=3){
-          const folder=decodeURIComponent(parts[1]);
-          (m.travels[folder]||(m.travels[folder]=[])).push(it.path);
-        }
-      } else if(it.path.startsWith('profile/')) m.profile.push(it.path);
-    }
-    return m;
-  };
-
-  const loadManifest = ()=> fetch('/manifest.json',{cache:'no-store'})
-    .then(r=>{ if(r.ok) return r.json(); throw new Error('no manifest'); })
-    .catch(()=> fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
-      .then(c=> fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+c.commit.tree.sha+'?recursive=1'))
-      .then(buildManifestFromTree));
-
-  const listPortfolio = (m)=> m.portfolio.map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));
-  const listTravelAll = (m)=>{
-    const out=[];
-    for(const f in m.travels){
-      m.travels[f].forEach(p=> out.push({src:rawURL(p),alt:p.split('/').pop(),folder:f,type:isVideo(p)?'video':'image'}));
-    }
-    return out;
-  };
-  const listAlbum = (m,folder)=> (m.travels[folder]||[]).map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));
-
-  const heroFromProfile = (m)=>{
-    const pics = m.profile.filter(isImg);
-    const starPic = pics.find(p=>endsWithToken(p,'star'));
-    return starPic ? rawURL(starPic) : (pics.length ? rawURL(pics[0]) : '/profile/profile-star.webp');
-  };
-
-  /* ---------- UI helpers ---------- */
-  const clear = (el)=>{ while(el.firstChild) el.removeChild(el.firstChild); };
-  const makeVideo = (src)=> {
-    const v=document.createElement('video');
-    v.src=src; v.muted=true; v.loop=true; v.autoplay=true; v.playsInline=true; v.controls=false;
-    return v;
-  };
-
-  // AOS mapping for the HOME grid (3 cols × 3 rows)
-  const homeAnim = (i)=>{
-    const row = (i/3)|0, col = i%3;
-    if(row===0) return col===0?'zoom-in-left':(col===1?'zoom-in-down':'zoom-in-right');
-    if(row===1) return col===0?'zoom-in-left':(col===1?'zoom-in':'zoom-in-right');
-    if(row===2) return col===0?'zoom-in-left':(col===1?'zoom-in-up':'zoom-in-right');
+  // animation mapping for 12 homepage slots
+  function homeAnim(i){
+    const n=i+1;
+    if(n===1) return 'zoom-in-right';
+    if(n===2||n===3) return 'zoom-in-down';
+    if(n===4) return 'zoom-in-left';
+    if(n===5) return 'zoom-in-right';
+    if(n===6||n===7) return 'zoom-in';
+    if(n===8) return 'zoom-in-left';
+    if(n===9) return 'zoom-in-right';
+    if(n===10||n===11) return 'zoom-in-up';
+    if(n===12) return 'zoom-in-left';
     return 'zoom-in';
-  };
+  }
 
-  const mountGrid = (id, files, onClick)=>{
-    const el=$(id); clear(el);
-    if(!files.length){
-      const p=document.createElement('p'); p.textContent='Nothing yet.'; p.style.color='#9aa7bd'; el.appendChild(p); return;
-    }
-
-    const addAOSHome = (i)=>{ if(!isMobile()) return homeAnim(i); return null; };
-
-    for(let i=0;i<files.length;i++){
-      const f=files[i];
-      const fig=document.createElement('figure'); fig.className='shot';
-
-      // Home stream: desktop/tablet only; other pages: simple zoom-in
-      if(id==='streamGrid'){
-        const anim = addAOSHome(i);
-        if(anim) fig.setAttribute('data-aos', anim);
-      } else {
-        fig.setAttribute('data-aos','zoom-in');
-      }
-
-      const node = f.type==='video'? makeVideo(f.src) : Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'});
-      if(onClick) fig.addEventListener('click', ()=>onClick(f));
-      fig.appendChild(node);
+  // load homepage grid
+  function mountHomepageGrid(){
+    const el=$('streamGrid'); el.innerHTML='';
+    for(let i=1;i<=12;i++){
+      const fig=document.createElement('figure');
+      fig.className='shot';
+      if(!isMobile()) fig.setAttribute('data-aos', homeAnim(i-1));
+      const img=new Image();
+      img.src='/homepage/'+i+'.webp';
+      img.alt='Homepage '+i;
+      img.loading='lazy';
+      fig.appendChild(img);
       el.appendChild(fig);
     }
     if(window.AOS && AOS.refresh) AOS.refresh();
-  };
+  }
+
+  // toggle AOS at bottom sentinel
+  function initAOSToggle(){
+    const sentinel=$('home-bottom-sentinel');
+    if(!sentinel || !('IntersectionObserver' in window)) return;
+    const io=new IntersectionObserver(entries=>{
+      entries.forEach(entry=>{
+        if(entry.isIntersecting){
+          document.body.classList.add('aos-ready');
+          if(window.AOS){ AOS.init({once:true,duration:500,easing:'ease-out'}); if(AOS.refresh) AOS.refresh(); }
+        } else {
+          document.body.classList.remove('aos-ready');
+        }
+      });
+    },{threshold:0.8});
+    io.observe(sentinel);
+  }
 
   // lightbox
-  let lightboxEl;
-  const setupLightbox = ()=>{
-    lightboxEl=$('lightbox');
-    lightboxEl.addEventListener('click',e=>{ if(e.target===lightboxEl || e.target.classList.contains('close')) closeLightbox(); }, {passive:true});
-    document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeLightbox(); });
-  };
-  const openLightbox = (f)=>{
-    lightboxEl.innerHTML='<button class="close">✕</button>';
-    if(f.type==='video'){ const v=makeVideo(f.src); v.controls=true; lightboxEl.appendChild(v); }
-    else{ const img=new Image(); img.src=f.src; img.alt=f.alt; lightboxEl.appendChild(img); }
-    lightboxEl.classList.add('open');
-  };
-  const closeLightbox = ()=> lightboxEl.classList.remove('open');
+  let lightbox=$('lightbox');
+  lightbox.addEventListener('click',e=>{if(e.target===lightbox||e.target.classList.contains('close'))lightbox.classList.remove('open');});
 
-  const views={home:$('view-home'),portfolio:$('view-portfolio'),travels:$('view-travels'),album:$('view-album')};
-  const show = (v)=>{ for(const k in views) views[k].classList.add('hidden'); views[v].classList.remove('hidden'); scrollTo(0,0); };
-
-  /* ---------- Routing ---------- */
-  const routeWith = (m)=>{
-    const h=(location.hash||'').slice(1);
-
-    if(h.startsWith('/portfolio')){
-      show('portfolio');
-      mountGrid('portfolioGrid',listPortfolio(m),openLightbox);
-      return;
-    }
-
-    if(h.startsWith('/travels')){
-      show('travels');
-      const g={};
-      listTravelAll(m).forEach(f=> (g[f.folder]||(g[f.folder]=[])).push(f));
-      const wrap=$('travelCards'); clear(wrap);
-      for(const folder in g){
-        const files=g[folder];
-        const starred = files.find(f=>endsWithToken(f.alt,'star')) || files[0];
-        const card=document.createElement('article'); card.className='place'; card.setAttribute('data-aos','zoom-in');
-        card.appendChild(starred.type==='video'?makeVideo(starred.src):Object.assign(new Image(),{src:starred.src,alt:folder}));
-        const ov=document.createElement('div'); ov.className='overlay';
-        ov.innerHTML='<h4>'+folder+'</h4><p>'+files.length+' files</p><a class="chip" href="#/travel/'+encodeURIComponent(folder)+'">View</a>';
-        card.appendChild(ov);
-        wrap.appendChild(card);
-      }
-      if(window.AOS && AOS.refresh) AOS.refresh();
-      return;
-    }
-
-    if(h.startsWith('/travel/')){
-      const folder=decodeURIComponent(h.split('/')[2]);
-      show('album'); $('albumTitle').textContent=folder;
-      mountGrid('albumGrid',listAlbum(m,folder),openLightbox);
-      return;
-    }
-
-    // HOME: star-first, fallback to all; cap to 12
-    show('home');
-    const all=[...listPortfolio(m),...listTravelAll(m)];
-    const starredOnly = all.filter(f=>endsWithToken(f.alt,'star'));
-    const stream = (starredOnly.length ? starredOnly : all).slice(0,12);
-    mountGrid('streamGrid',stream,(f)=>{ location.hash = f.folder ? '#/travel/'+encodeURIComponent(f.folder) : '#/portfolio'; });
-  };
-
-  /* ---------- AOS enable only after bottom-of-home ---------- */
-  const enableAOSOnce = ()=>{
-    if(document.body.classList.contains('aos-ready')) return;
-    document.body.classList.add('aos-ready');
-    if(window.AOS){
-      AOS.init({ once:true, duration:500, easing:'ease-out' });
-      if(AOS.refresh) AOS.refresh();
-    }
-  };
-
-  const initAOSOnHomeBottom = ()=>{
-    const sentinel = $('home-bottom-sentinel');
-    if(!('IntersectionObserver' in window) || !sentinel){
-      window.addEventListener('load', enableAOSOnce, { once:true });
-      return;
-    }
-    let seen=false;
-    const io = new IntersectionObserver((entries)=>{
-      if(seen) return;
-      for(const e of entries){
-        if(e.isIntersecting){
-          seen=true; io.disconnect(); enableAOSOnce();
-          break;
-        }
-      }
-    }, { root:null, threshold:0.6 });
-    io.observe(sentinel);
-  };
-
-  /* ---------- Boot ---------- */
-  const boot = ()=>{
-    setupLightbox();
-    initAOSOnHomeBottom();
-    loadManifest().then((m)=>{
-      // If repo also has a profile-star, this may swap the initial /profile/ image
-      $('heroImg').src = heroFromProfile(m);
-      routeWith(m);
-      window.addEventListener('hashchange', ()=>routeWith(m));
-    });
-  };
+  // boot
+  function boot(){
+    mountHomepageGrid();
+    initAOSToggle();
+  }
   boot();
 })();
 </script>
