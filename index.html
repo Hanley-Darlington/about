@@ -34,6 +34,9 @@
     a{color:inherit;text-decoration:none}
     .container{width:min(1200px,92%);margin-inline:auto}
 
+    /* Hide AOS targets until first scroll (when AOS is initialized) */
+    body:not(.aos-ready) [data-aos]{opacity:0}
+
     /* Header (clickable to Home) */
     header{
       position:sticky;
@@ -260,15 +263,9 @@
   function homeAnim(index){
     var row = Math.floor(index / 3);   // 0,1,2 -> top,middle,bottom
     var col = index % 3;               // 0,1,2 -> left,middle,right
-    if(row === 0){                     // top row
-      return col === 0 ? 'zoom-in-left' : col === 1 ? 'zoom-in-down' : 'zoom-in-right';
-    }
-    if(row === 1){                     // middle row
-      return col === 0 ? 'zoom-in-left' : col === 1 ? 'zoom-in'      : 'zoom-in-right';
-    }
-    if(row === 2){                     // bottom row
-      return col === 0 ? 'zoom-in-left' : col === 1 ? 'zoom-in-up'   : 'zoom-in-right';
-    }
+    if(row === 0){ return col === 0 ? 'zoom-in-left' : col === 1 ? 'zoom-in-down' : 'zoom-in-right'; }
+    if(row === 1){ return col === 0 ? 'zoom-in-left' : col === 1 ? 'zoom-in'      : 'zoom-in-right'; }
+    if(row === 2){ return col === 0 ? 'zoom-in-left' : col === 1 ? 'zoom-in-up'   : 'zoom-in-right'; }
     return 'zoom-in';
   }
 
@@ -279,7 +276,6 @@
     }
     files.forEach(function(f,i){
       var fig=document.createElement('figure');fig.className='shot';
-      // Efficient: only apply special mapping to HOME stream
       var anim = (id==='streamGrid') ? homeAnim(i) : 'zoom-in';
       fig.setAttribute('data-aos', anim);
 
@@ -288,7 +284,6 @@
       fig.appendChild(node);
       el.appendChild(fig);
     });
-    // refresh AOS for dynamically added nodes
     if(window.AOS && AOS.refresh) AOS.refresh();
   }
 
@@ -326,7 +321,6 @@
       var wrap=byId('travelCards');clear(wrap);
       for(var folder in g){
         var files=g[folder];
-        // prefer any *star file; otherwise first
         var starred = files.find(function(f){ return endsWithToken(f.alt,'star'); }) || files[0];
         var card=document.createElement('article');card.className='place'; card.setAttribute('data-aos','zoom-in');
         card.appendChild(starred.type==='video'?makeVideo(starred.src):Object.assign(new Image(),{src:starred.src,alt:folder}));
@@ -357,10 +351,31 @@
     });
   }
 
+  // Initialize AOS on the FIRST user scroll only
+  function initAOSOnFirstScroll(){
+    var inited = false;
+    function go(){
+      if(inited) return;
+      inited = true;
+      document.body.classList.add('aos-ready');
+      if(window.AOS){
+        AOS.init({ once:true, duration:500, easing:'ease-out' });
+        if(AOS.refresh) AOS.refresh();
+      }
+      window.removeEventListener('scroll', go);
+      window.removeEventListener('wheel', go, {passive:true});
+      window.removeEventListener('touchmove', go, {passive:true});
+      window.removeEventListener('keydown', go);
+    }
+    window.addEventListener('scroll', go, {passive:true});
+    window.addEventListener('wheel', go, {passive:true});
+    window.addEventListener('touchmove', go, {passive:true}); // mobile
+    window.addEventListener('keydown', go); // PageDown/Spacebar
+  }
+
   function boot(){
     setupLightbox();
-    // Init AOS once
-    if(window.AOS) AOS.init({ once:true, duration:500, easing:'ease-out' });
+    initAOSOnFirstScroll(); // <-- key change: wait for first scroll
     loadManifest().then(function(m){
       byId('heroImg').src=heroFromProfile(m);
       routeWith(m);
