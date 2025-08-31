@@ -17,7 +17,7 @@
       --bg:#0b0e14; --muted:#94a3b8; --text:#e8eefc;
       --brand:#7c3aed; --brand-2:#22d3ee; --ring:rgba(124,58,237,.4);
       --shadow:0 14px 40px rgba(0,0,0,.5); --radius:20px;
-      --home-spacer: 1200px; /* height of the blank area under the hero on desktop */
+      --home-spacer: 500px; /* height of the blank area under the hero on desktop */
     }
     *{box-sizing:border-box;margin:0;padding:0}
     body{
@@ -329,7 +329,7 @@
 
   function atBottom(){
     var doc = document.documentElement;
-    return (window.innerHeight + window.scrollY) >= (doc.scrollHeight - 10);
+    return (window.innerHeight + window.scrollY) >= (doc.scrollHeight - 100);
   }
 
   function enableHome(gridEl){
