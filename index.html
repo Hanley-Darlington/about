@@ -97,7 +97,7 @@
     .footer-center{display:flex;flex-direction:column;align-items:center;gap:10px}
     .social{display:flex;gap:10px}
 
-    /* Keep hover on homepage (and desktop) */
+    /* Hover (desktop) */
     @media (hover:hover) and (pointer:fine){
       .shot{transition: transform .18s ease, box-shadow .18s ease;will-change: transform;}
       .shot:hover{transform: translateY(-4px) scale(1.02);box-shadow: 0 20px 50px rgba(0,0,0,.6);}
@@ -108,6 +108,8 @@
     .lightbox.open{ display: flex; }
     .lightbox img, .lightbox video{max-width: min(1200px, 95vw);max-height: 90vh;border-radius: 16px;box-shadow: var(--shadow);background:#000;}
     .lightbox .close{position: absolute; top: 14px; right: 14px;padding: 8px 12px; border-radius: 999px;background: rgba(255,255,255,.12);border: 1px solid rgba(255,255,255,.18);color: #fff; cursor: pointer;}
+    /* AOS wrapper doesn't change layout */
+    .aos-wrap{display:block}
   </style>
 </head>
 <body>
@@ -233,7 +235,7 @@
   function listTravelAll(m){var out=[];for(var f in m.travels){m.travels[f].forEach(p=>out.push({src:rawURL(p),alt:p.split('/').pop(),folder:f,type:isVideo(p)?'video':'image'}));}return out;}
   function listAlbum(m,folder){return (m.travels[folder]||[]).map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));}
 
-  // NEW: homepage list strictly from /homepage/1..12.webp
+  // Homepage list strictly from /homepage/1..12.webp
   function listHomepage(){
     var arr=[];
     for(var i=1;i<=12;i++){
@@ -252,67 +254,127 @@
   function byId(id){return document.getElementById(id);} function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
   function makeVideo(src){var v=document.createElement('video');v.src=src;v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.controls=false;return v;}
 
-  function mountGrid(id,files,onClick){var el=byId(id);clear(el);if(!files.length){var p=document.createElement('p');p.textContent='Nothing yet.';p.style.color='#9aa7bd';el.appendChild(p);return;}files.forEach(f=>{var fig=document.createElement('figure');fig.className='shot';var node=f.type==='video'?makeVideo(f.src):(Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'}));if(onClick)fig.addEventListener('click',()=>onClick(f));fig.appendChild(node);el.appendChild(fig);});return el;}
+  // Standard grid
+  function mountGrid(id,files,onClick){
+    var el=byId(id); clear(el);
+    if(!files.length){
+      var p=document.createElement('p');p.textContent='Nothing yet.';p.style.color='#9aa7bd';el.appendChild(p);return;
+    }
+    files.forEach(f=>{
+      var fig=document.createElement('figure');fig.className='shot';
+      var node=f.type==='video'?makeVideo(f.src):(Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'}));
+      if(onClick) fig.addEventListener('click',()=>onClick(f));
+      fig.appendChild(node);
+      el.appendChild(fig);
+    });
+    return el;
+  }
+
+  // Homepage grid (wrap each .shot so AOS never touches the hover target)
+  function mountHomeGrid(id,files){
+    var el=byId(id); clear(el);
+    files.forEach(f=>{
+      var wrap=document.createElement('div'); wrap.className='aos-wrap';
+      var fig=document.createElement('figure'); fig.className='shot';
+      var img=Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'});
+      fig.appendChild(img); wrap.appendChild(fig); el.appendChild(wrap);
+    });
+    return el;
+  }
 
   // lightbox
-  var lightboxEl;function setupLightbox(){lightboxEl=byId('lightbox');lightboxEl.addEventListener('click',e=>{if(e.target===lightboxEl||e.target.classList.contains('close'))closeLightbox();});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox();});}
-  function openLightbox(f){lightboxEl.innerHTML='<button class="close">✕</button>';if(f.type==='video'){var v=makeVideo(f.src);v.controls=true;lightboxEl.appendChild(v);}else{var img=new Image();img.src=f.src;img.alt=f.alt;lightboxEl.appendChild(img);}lightboxEl.classList.add('open');}
+  var lightboxEl;
+  function setupLightbox(){
+    lightboxEl=byId('lightbox');
+    lightboxEl.addEventListener('click',e=>{
+      if(e.target===lightboxEl||e.target.classList.contains('close'))closeLightbox();
+    });
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox();});
+  }
+  function openLightbox(f){
+    lightboxEl.innerHTML='<button class="close">✕</button>';
+    if(f.type==='video'){var v=makeVideo(f.src);v.controls=true;lightboxEl.appendChild(v);}
+    else{var img=new Image();img.src=f.src;img.alt=f.alt;lightboxEl.appendChild(img);}
+    lightboxEl.classList.add('open');
+  }
   function closeLightbox(){lightboxEl.classList.remove('open');}
 
   var views={home:byId('view-home'),portfolio:byId('view-portfolio'),travels:byId('view-travels'),album:byId('view-album')};
   function show(v){Object.values(views).forEach(x=>x.classList.add('hidden'));views[v].classList.remove('hidden');scrollTo(0,0);}
 
-  // --- AOS control (desktop homepage only, appears after scrolling past hero, removed when back up) ---
+  // --- AOS control (desktop homepage only; enable after scroll past hero; disable when above) ---
   var homeScrollHandler = null;
+  var aosEnabled = false;
+
+  // map animations onto wrappers (not figures)
   function mapHomeAOS(gridEl){
-    if(!isDesktop || !window.AOS) return; // desktop only
+    if(!isDesktop || !window.AOS) return;
     var anim = [
       'zoom-in-right','zoom-in-down','zoom-in-down','zoom-in-left',
       'zoom-in-right','zoom-in','zoom-in','zoom-in-left',
       'zoom-in-right','zoom-in-up','zoom-in-up','zoom-in-left'
     ];
-    var shots = Array.prototype.slice.call(gridEl.querySelectorAll('.shot'));
-    shots.forEach(function(fig, i){
-      fig.removeAttribute('data-aos'); // clear first
-      if(anim[i]) fig.setAttribute('data-aos', anim[i]);
+    var wraps = Array.prototype.slice.call(gridEl.querySelectorAll('.aos-wrap'));
+    wraps.forEach(function(wrap,i){
+      wrap.removeAttribute('data-aos');
+      wrap.classList.remove('aos-init','aos-animate');
+      if(anim[i]) wrap.setAttribute('data-aos',anim[i]);
     });
   }
+
   function clearAOSIn(el){
     if(!window.AOS) return;
-    el.querySelectorAll('[data-aos]').forEach(function(n){ n.removeAttribute('data-aos'); });
-    AOS.refreshHard(); // purge
+    el.querySelectorAll('.aos-wrap').forEach(function(wrap){
+      wrap.removeAttribute('data-aos');
+      wrap.classList.remove('aos-init','aos-animate');
+    });
+    AOS.refreshHard();
   }
+
   function enableHomeAOS(gridEl){
+    if(aosEnabled) return;
     mapHomeAOS(gridEl);
-    AOS.init({ once:false, duration:600, easing:'ease-out-cubic', offset:80 });
-    AOS.refresh();
+    // prep hidden state so first frame after init animates smoothly
+    gridEl.querySelectorAll('.aos-wrap[data-aos]').forEach(function(w){ w.classList.add('aos-init'); });
+    requestAnimationFrame(function(){
+      AOS.init({ once:false, duration:600, easing:'ease-out-cubic', offset:80, mirror:false });
+      AOS.refreshHard();
+      aosEnabled = true;
+    });
   }
+
   function disableHomeAOS(gridEl){
-    clearAOSIn(gridEl);
+    if(!aosEnabled) { clearAOSIn(gridEl || document); return; }
+    clearAOSIn(gridEl || document);
+    aosEnabled = false;
   }
+
   function installHomeScrollToggle(gridEl){
     if(!isDesktop || !window.AOS) return;
     var hero = document.getElementById('homeHero');
-    var threshold = hero.offsetTop + hero.offsetHeight - 60;
-    var enabled = false;
+    var threshold = hero.offsetTop + hero.offsetHeight - 60; // bottom of hero
+    var wasEnabled = false;
 
     function onScroll(){
       var y = window.scrollY || document.documentElement.scrollTop || 0;
-      if(!enabled && y >= threshold){
-        enableHomeAOS(gridEl); enabled = true;
-      }else if(enabled && y < threshold){
-        disableHomeAOS(gridEl); enabled = false;
+      if(!wasEnabled && y >= threshold){
+        enableHomeAOS(gridEl); wasEnabled = true;
+      }else if(wasEnabled && y < threshold){
+        disableHomeAOS(gridEl); wasEnabled = false;
       }
     }
-    onScroll(); // set initial state
+    disableHomeAOS(gridEl); // clean start (no AOS, hover works)
     window.addEventListener('scroll', onScroll, { passive:true });
     homeScrollHandler = onScroll;
+    onScroll(); // set initial state
   }
+
   function uninstallHomeScrollToggle(){
     if(homeScrollHandler){
       window.removeEventListener('scroll', homeScrollHandler);
       homeScrollHandler = null;
     }
+    aosEnabled = false;
   }
   // --------------------------------------------------------------------
 
@@ -321,7 +383,6 @@
 
     if(h.startsWith('/portfolio')){
       uninstallHomeScrollToggle();
-      // ensure no AOS on other pages
       disableHomeAOS(document);
       show('portfolio');
       mountGrid('portfolioGrid',listPortfolio(m),openLightbox);
@@ -360,11 +421,9 @@
 
     // HOME: strictly 12 images from /homepage/
     show('home');
-    var gridEl = mountGrid('streamGrid', listHomepage(), function(){ /* no click-through for homepage tiles */ });
-    // AOS: install scroll toggle so animations appear near bottom, disappear when back up
+    var gridEl = mountHomeGrid('streamGrid', listHomepage());
     uninstallHomeScrollToggle();
-    disableHomeAOS(gridEl); // start clean
-    installHomeScrollToggle(gridEl);
+    installHomeScrollToggle(gridEl); // animations only after scroll; removed when scrolled back up
   }
 
   function boot(){
