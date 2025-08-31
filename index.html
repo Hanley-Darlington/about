@@ -17,6 +17,7 @@
       --bg:#0b0e14; --muted:#94a3b8; --text:#e8eefc;
       --brand:#7c3aed; --brand-2:#22d3ee; --ring:rgba(124,58,237,.4);
       --shadow:0 14px 40px rgba(0,0,0,.5); --radius:20px;
+      --home-spacer: 1200px; /* height of the blank area under the hero on desktop */
     }
     *{box-sizing:border-box;margin:0;padding:0}
     body{
@@ -33,14 +34,11 @@
 
     /* Header (clickable to Home) */
     header{
-      position:sticky;
-      top:0;
-      z-index:9999;
+      position:sticky; top:0; z-index:9999;
       background:rgba(15,21,36,.78);
       backdrop-filter:saturate(150%) blur(12px);
       border-bottom:1px solid rgba(255,255,255,.08);
-      cursor:pointer;
-      isolation:isolate;
+      cursor:pointer; isolation:isolate;
     }
 
     .nav{display:flex;justify-content:flex-end;align-items:center;padding:14px 28px;gap:12px}
@@ -107,7 +105,13 @@
     .lightbox img, .lightbox video{max-width: min(1200px, 95vw);max-height: 90vh;border-radius: 16px;box-shadow: var(--shadow);background:#000;}
     .lightbox .close{position: absolute; top: 14px; right: 14px;padding: 8px 12px; border-radius: 999px;background: rgba(255,255,255,.12);border: 1px solid rgba(255,255,255,.18);color: #fff; cursor: pointer;}
 
-    /* -------- Scroll animations (AOS-like, no lib) -------- */
+    /* ---------- Desktop-only blank space under hero ---------- */
+    .home-spacer{display:none;}
+    @media (hover:hover) and (pointer:fine){
+      .home-spacer{display:block;height:var(--home-spacer);}
+    }
+
+    /* ---------- Lightweight AOS-like animations ---------- */
     .anim-wrap{display:block;will-change:transform,opacity}
     .anim-play.zoom-in        {animation:zin .6s ease-out both}
     .anim-play.zoom-in-up     {animation:zinUp .6s ease-out both}
@@ -128,7 +132,6 @@
       .anim-play.zoom-in-left,
       .anim-play.zoom-in-right{animation:none}
     }
-    /* ------------------------------------------------------ */
   </style>
 </head>
 <body>
@@ -162,6 +165,10 @@
         <div><h1>William Darlington</h1><p>Vires in Numeris</p><p>All Visuals are Authentic</p></div>
         <div class="hero-card"><img id="heroImg" alt="Profile"></div>
       </div>
+
+      <!-- Blank area that will be filled by the gallery when you reach the bottom -->
+      <div class="home-spacer" id="homeSpacer" aria-hidden="true"></div>
+
       <div class="gallery stream-grid" id="streamGrid"><p style="color:#9aa7bd">Loading photos…</p></div>
     </div>
   </section>
@@ -258,7 +265,7 @@
     return arr;
   }
 
-  // hero prefers profile image ending in *star, else falls back
+  // hero prefers profile image ending in *star, else fallback
   function heroFromProfile(m){
     var pics=m.profile.filter(isImg);
     var starPic = pics.find(function(p){ return endsWithToken(p,'star'); });
@@ -269,7 +276,7 @@
   function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
   function makeVideo(src){var v=document.createElement('video');v.src=src;v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.controls=false;return v;}
 
-  // Standard grid (non-home)
+  // Non-home grids
   function mountGrid(id,files,onClick){
     var el=byId(id); clear(el);
     if(!files.length){var p=document.createElement('p');p.textContent='Nothing yet.';p.style.color='#9aa7bd';el.appendChild(p);return;}
@@ -282,7 +289,7 @@
     return el;
   }
 
-  // Home grid with animation wrapper (so hover stays on .shot)
+  // Home grid with animation wrapper (hover remains on .shot)
   function mountHomeGrid(id,files){
     var el=byId(id); clear(el);
     var animOrder = [
@@ -299,7 +306,7 @@
     return el;
   }
 
-  // lightbox
+  // Lightbox
   var lightboxEl;
   function setupLightbox(){
     lightboxEl=byId('lightbox');
@@ -317,59 +324,84 @@
   var views={home:byId('view-home'),portfolio:byId('view-portfolio'),travels:byId('view-travels'),album:byId('view-album')};
   function show(v){Object.values(views).forEach(x=>x.classList.add('hidden'));views[v].classList.remove('hidden');scrollTo(0,0);}
 
-  /* ---------- Scroll toggle for animations (desktop only) ---------- */
+  /* ---------- Desktop scroll-to-bottom toggle ---------- */
   var homeScrollHandler=null, animEnabled=false;
-  function enableHomeAnims(gridEl){
+
+  function atBottom(){
+    var doc = document.documentElement;
+    return (window.innerHeight + window.scrollY) >= (doc.scrollHeight - 10);
+  }
+
+  function enableHome(gridEl){
     if(animEnabled) return;
+    // Fill the blank space: hide spacer, show grid
+    var spacer = byId('homeSpacer');
+    if(spacer) spacer.style.display='none';
+    gridEl.style.display='grid';
+    // Start animations (wrappers)
     gridEl.querySelectorAll('.anim-wrap').forEach(function(w,i){
-      // restart animation reliably
-      w.classList.remove('anim-play');
-      void w.offsetWidth;           // force reflow
+      w.classList.remove('anim-play'); void w.offsetWidth; // restart
+      w.style.animationDelay = (Math.floor(i/4)*60 + (i%4)*30)+'ms';
       w.classList.add('anim-play');
-      // small stagger (optional)
-      w.style.animationDelay = (Math.floor(i/4)*40 + (i%4)*20)+'ms';
     });
     animEnabled=true;
   }
-  function disableHomeAnims(gridEl){
-    if(!gridEl) return;
+
+  function disableHome(gridEl){
+    if(!animEnabled) {
+      // keep spacer visible, grid hidden (cold state)
+      var spacer = byId('homeSpacer'); if(spacer) spacer.style.display='';
+      gridEl.style.display='none';
+      return;
+    }
+    // Put the blank space back and hide grid again
+    var spacer2 = byId('homeSpacer'); if(spacer2) spacer2.style.display='';
+    gridEl.style.display='none';
+    // stop animations
     gridEl.querySelectorAll('.anim-wrap').forEach(function(w){
       w.classList.remove('anim-play');
-      w.style.animationDelay = '';
+      w.style.animationDelay='';
     });
     animEnabled=false;
   }
-  function installHomeScrollToggle(gridEl){
-    if(!isDesktop){ disableHomeAnims(gridEl); return; }
-    var hero = document.getElementById('homeHero');
-    var threshold = hero.offsetTop + hero.offsetHeight - 60;
+
+  function installHomeBottomToggle(gridEl){
+    if(!isDesktop){ // mobile: just show grid normally, no animations
+      byId('homeSpacer').style.display='none';
+      gridEl.style.display='grid';
+      return;
+    }
+    // start with blank space + hidden grid
+    disableHome(gridEl);
     function onScroll(){
-      var y = window.scrollY || document.documentElement.scrollTop || 0;
-      if(y >= threshold) enableHomeAnims(gridEl);
-      else disableHomeAnims(gridEl);
+      if(atBottom()) enableHome(gridEl);
+      else disableHome(gridEl);
     }
     homeScrollHandler = onScroll;
     window.addEventListener('scroll', onScroll, {passive:true});
     onScroll(); // set initial state
   }
-  function uninstallHomeScrollToggle(gridEl){
+  function uninstallHomeBottomToggle(gridEl){
     if(homeScrollHandler){ window.removeEventListener('scroll', homeScrollHandler); homeScrollHandler=null; }
-    disableHomeAnims(gridEl||document.getElementById('streamGrid'));
+    // clean state
+    var spacer = byId('homeSpacer'); if(spacer) spacer.style.display='none';
+    if(gridEl){ gridEl.style.display='grid'; gridEl.querySelectorAll('.anim-wrap').forEach(w=>w.classList.remove('anim-play')); }
+    animEnabled=false;
   }
-  /* ---------------------------------------------------------------- */
+  /* ---------------------------------------------------- */
 
   function routeWith(m){
     var h=(location.hash||'').slice(1);
 
     if(h.startsWith('/portfolio')){
-      uninstallHomeScrollToggle();
+      uninstallHomeBottomToggle();
       show('portfolio');
       mountGrid('portfolioGrid',listPortfolio(m),openLightbox);
       return;
     }
 
     if(h.startsWith('/travels')){
-      uninstallHomeScrollToggle();
+      uninstallHomeBottomToggle();
       show('travels');
       var g={};
       listTravelAll(m).forEach(f=>(g[f.folder]||(g[f.folder]=[])).push(f));
@@ -389,7 +421,7 @@
     }
 
     if(h.startsWith('/travel/')){
-      uninstallHomeScrollToggle();
+      uninstallHomeBottomToggle();
       var folder=decodeURIComponent(h.split('/')[2]);
       show('album'); byId('albumTitle').textContent=folder;
       mountGrid('albumGrid',listAlbum(m,folder),openLightbox);
@@ -399,12 +431,19 @@
     // HOME
     show('home');
     var gridEl = mountHomeGrid('streamGrid', listHomepage());
-    uninstallHomeScrollToggle(gridEl); // ensure clean slate
-    installHomeScrollToggle(gridEl);   // enable-on-scroll behavior
+    uninstallHomeBottomToggle(gridEl);
+    installHomeBottomToggle(gridEl); // gallery fills blank space only at bottom
+    // hero image
   }
 
   function boot(){
-    setupLightbox();
+    // lightbox
+    (function setupLightbox(){
+      var lightboxEl=document.getElementById('lightbox');
+      lightboxEl.addEventListener('click',e=>{ if(e.target===lightboxEl||e.target.classList.contains('close')) lightboxEl.classList.remove('open'); });
+      document.addEventListener('keydown',e=>{ if(e.key==='Escape') lightboxEl.classList.remove('open'); });
+    })();
+
     loadManifest().then(m=>{
       document.getElementById('heroImg').src=heroFromProfile(m);
       routeWith(m);
