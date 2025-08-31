@@ -17,12 +17,7 @@
       --bg:#0b0e14; --muted:#94a3b8; --text:#e8eefc;
       --brand:#7c3aed; --brand-2:#22d3ee; --ring:rgba(124,58,237,.4);
       --shadow:0 14px 40px rgba(0,0,0,.5); --radius:20px;
-
-      /* height of the blank area under the hero on desktop */
-      --home-spacer: 1200px;
-
-      /* scroll reveal progress (0..1), set by JS */
-      --reveal: 0;
+      --home-spacer: 400px; /* height of the blank area under the hero on desktop */
     }
     *{box-sizing:border-box;margin:0;padding:0}
     body{
@@ -116,27 +111,27 @@
       .home-spacer{display:block;height:var(--home-spacer);}
     }
 
-    /* ---------- Scroll-linked reveal (no timers, tied to --reveal) ---------- */
-    .reveal-grid{ --reveal: 0; }
-    .reveal-grid .anim-wrap{
-      display:block;
-      /* translate based on direction vars and scale from .92 -> 1 */
-      transform:
-        translate3d(
-          calc(var(--dx, 0px) * (1 - var(--reveal))),
-          calc(var(--dy, 0px) * (1 - var(--reveal))),
-          0)
-        scale(calc(.92 + .08 * var(--reveal)));
-      opacity: calc(.12 + .88 * var(--reveal));
-      transition: transform 40ms linear, opacity 40ms linear; /* smooth but scroll-linked */
-      will-change: transform, opacity;
+    /* ---------- Lightweight AOS-like animations ---------- */
+    .anim-wrap{display:block;will-change:transform,opacity}
+    .anim-play.zoom-in        {animation:zin .6s ease-out both}
+    .anim-play.zoom-in-up     {animation:zinUp .6s ease-out both}
+    .anim-play.zoom-in-down   {animation:zinDown .6s ease-out both}
+    .anim-play.zoom-in-left   {animation:zinLeft .6s ease-out both}
+    .anim-play.zoom-in-right  {animation:zinRight .6s ease-out both}
+
+    @keyframes zin      {from{opacity:0;transform:scale(.92)}         to{opacity:1;transform:none}}
+    @keyframes zinUp    {from{opacity:0;transform:translateY(24px) scale(.92)}   to{opacity:1;transform:none}}
+    @keyframes zinDown  {from{opacity:0;transform:translateY(-24px) scale(.92)}  to{opacity:1;transform:none}}
+    @keyframes zinLeft  {from{opacity:0;transform:translateX(-24px) scale(.92)}  to{opacity:1;transform:none}}
+    @keyframes zinRight {from{opacity:0;transform:translateX(24px) scale(.92)}   to{opacity:1;transform:none}}
+
+    @media (prefers-reduced-motion: reduce){
+      .anim-play.zoom-in,
+      .anim-play.zoom-in-up,
+      .anim-play.zoom-in-down,
+      .anim-play.zoom-in-left,
+      .anim-play.zoom-in-right{animation:none}
     }
-    /* direction presets for each tile */
-    .zoom-in-right{ --dx: 24px; --dy: 0px; }
-    .zoom-in-left { --dx:-24px; --dy: 0px; }
-    .zoom-in-up   { --dx: 0px;  --dy: 24px; }
-    .zoom-in-down { --dx: 0px;  --dy:-24px; }
-    .zoom-in      { --dx: 0px;  --dy: 0px;  }
   </style>
 </head>
 <body>
@@ -171,10 +166,10 @@
         <div class="hero-card"><img id="heroImg" alt="Profile"></div>
       </div>
 
-      <!-- Blank area that stays; gallery reveals as you near the bottom -->
+      <!-- Blank area that will be filled by the gallery when you reach the bottom -->
       <div class="home-spacer" id="homeSpacer" aria-hidden="true"></div>
 
-      <div class="gallery stream-grid reveal-grid" id="streamGrid"><!-- will be filled --></div>
+      <div class="gallery stream-grid" id="streamGrid"><p style="color:#9aa7bd">Loading photos…</p></div>
     </div>
   </section>
 
@@ -270,6 +265,7 @@
     return arr;
   }
 
+  // hero prefers profile image ending in *star, else fallback
   function heroFromProfile(m){
     var pics=m.profile.filter(isImg);
     var starPic = pics.find(function(p){ return endsWithToken(p,'star'); });
@@ -278,9 +274,9 @@
 
   function byId(id){return document.getElementById(id);}
   function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
+  function makeVideo(src){var v=document.createElement('video');v.src=src;v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.controls=false;return v;}
 
   // Non-home grids
-  function makeVideo(src){var v=document.createElement('video');v.src=src;v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.controls=false;return v;}
   function mountGrid(id,files,onClick){
     var el=byId(id); clear(el);
     if(!files.length){var p=document.createElement('p');p.textContent='Nothing yet.';p.style.color='#9aa7bd';el.appendChild(p);return;}
@@ -293,7 +289,7 @@
     return el;
   }
 
-  // Home grid with wrappers for direction transforms (hover stays on .shot)
+  // Home grid with animation wrapper (hover remains on .shot)
   function mountHomeGrid(id,files){
     var el=byId(id); clear(el);
     var animOrder = [
@@ -310,73 +306,102 @@
     return el;
   }
 
-  // Lightbox (unchanged, not used on home tiles)
-  (function setupLightbox(){
-    var lightboxEl=document.getElementById('lightbox');
-    lightboxEl.addEventListener('click',e=>{ if(e.target===lightboxEl||e.target.classList.contains('close')) lightboxEl.classList.remove('open'); });
-    document.addEventListener('keydown',e=>{ if(e.key==='Escape') lightboxEl.classList.remove('open'); });
-  })();
+  // Lightbox
+  var lightboxEl;
+  function setupLightbox(){
+    lightboxEl=byId('lightbox');
+    lightboxEl.addEventListener('click',e=>{ if(e.target===lightboxEl||e.target.classList.contains('close'))closeLightbox(); });
+    document.addEventListener('keydown',e=>{ if(e.key==='Escape')closeLightbox(); });
+  }
+  function openLightbox(f){
+    lightboxEl.innerHTML='<button class="close">✕</button>';
+    if(f.type==='video'){var v=makeVideo(f.src);v.controls=true;lightboxEl.appendChild(v);}
+    else{var img=new Image();img.src=f.src;img.alt=f.alt;lightboxEl.appendChild(img);}
+    lightboxEl.classList.add('open');
+  }
+  function closeLightbox(){lightboxEl.classList.remove('open');}
 
   var views={home:byId('view-home'),portfolio:byId('view-portfolio'),travels:byId('view-travels'),album:byId('view-album')};
   function show(v){Object.values(views).forEach(x=>x.classList.add('hidden'));views[v].classList.remove('hidden');scrollTo(0,0);}
 
-  /* ---------- Smooth scroll-linked reveal (down AND up) ---------- */
-  var homeScrollHandler=null;
+  /* ---------- Desktop scroll-to-bottom toggle ---------- */
+  var homeScrollHandler=null, animEnabled=false;
 
-  function getSpacerPx(){
-    // read --home-spacer (may include px)
-    var v = getComputedStyle(document.documentElement).getPropertyValue('--home-spacer').trim();
-    var n = parseFloat(v || '1200'); return isNaN(n)?1200:n;
-  }
-
-  function revealProgress(){
-    // distance from bottom
+  function atBottom(){
     var doc = document.documentElement;
-    var dist = doc.scrollHeight - (window.innerHeight + (window.scrollY || doc.scrollTop || 0));
-    // map dist -> [0..1] across (spacer + viewport/2) so reveal starts as you enter the spacer
-    var span = getSpacerPx() + (window.innerHeight * 0.5);
-    var p = 1 - Math.min(Math.max(dist / span, 0), 1);
-    return p;
+    return (window.innerHeight + window.scrollY) >= (doc.scrollHeight - 120);
   }
 
-  function installScrollReveal(gridEl){
-    // nothing special on mobile; still works but spacer hidden
+  function enableHome(gridEl){
+    if(animEnabled) return;
+    // Fill the blank space: hide spacer, show grid
+    var spacer = byId('homeSpacer');
+    if(spacer) spacer.style.display='none';
+    gridEl.style.display='grid';
+    // Start animations (wrappers)
+    gridEl.querySelectorAll('.anim-wrap').forEach(function(w,i){
+      w.classList.remove('anim-play'); void w.offsetWidth; // restart
+      w.style.animationDelay = (Math.floor(i/4)*60 + (i%4)*30)+'ms';
+      w.classList.add('anim-play');
+    });
+    animEnabled=true;
+  }
+
+  function disableHome(gridEl){
+    if(!animEnabled) {
+      // keep spacer visible, grid hidden (cold state)
+      var spacer = byId('homeSpacer'); if(spacer) spacer.style.display='';
+      gridEl.style.display='none';
+      return;
+    }
+    // Put the blank space back and hide grid again
+    var spacer2 = byId('homeSpacer'); if(spacer2) spacer2.style.display='';
+    gridEl.style.display='none';
+    // stop animations
+    gridEl.querySelectorAll('.anim-wrap').forEach(function(w){
+      w.classList.remove('anim-play');
+      w.style.animationDelay='';
+    });
+    animEnabled=false;
+  }
+
+  function installHomeBottomToggle(gridEl){
+    if(!isDesktop){ // mobile: just show grid normally, no animations
+      byId('homeSpacer').style.display='none';
+      gridEl.style.display='grid';
+      return;
+    }
+    // start with blank space + hidden grid
+    disableHome(gridEl);
     function onScroll(){
-      // rAF to keep it silky
-      if(onScroll._ticking) return;
-      onScroll._ticking = true;
-      requestAnimationFrame(function(){
-        var p = revealProgress();
-        gridEl.style.setProperty('--reveal', p.toFixed(3));
-        onScroll._ticking = false;
-      });
+      if(atBottom()) enableHome(gridEl);
+      else disableHome(gridEl);
     }
     homeScrollHandler = onScroll;
     window.addEventListener('scroll', onScroll, {passive:true});
-    onScroll(); // set initial position
+    onScroll(); // set initial state
   }
-
-  function uninstallScrollReveal(gridEl){
-    if(homeScrollHandler){
-      window.removeEventListener('scroll', homeScrollHandler);
-      homeScrollHandler = null;
-    }
-    if(gridEl) gridEl.style.setProperty('--reveal','1'); // fully visible on exit to be safe
+  function uninstallHomeBottomToggle(gridEl){
+    if(homeScrollHandler){ window.removeEventListener('scroll', homeScrollHandler); homeScrollHandler=null; }
+    // clean state
+    var spacer = byId('homeSpacer'); if(spacer) spacer.style.display='none';
+    if(gridEl){ gridEl.style.display='grid'; gridEl.querySelectorAll('.anim-wrap').forEach(w=>w.classList.remove('anim-play')); }
+    animEnabled=false;
   }
-  /* ---------------------------------------------------------------- */
+  /* ---------------------------------------------------- */
 
   function routeWith(m){
     var h=(location.hash||'').slice(1);
 
     if(h.startsWith('/portfolio')){
-      uninstallScrollReveal();
+      uninstallHomeBottomToggle();
       show('portfolio');
-      mountGrid('portfolioGrid',listPortfolio(m));
+      mountGrid('portfolioGrid',listPortfolio(m),openLightbox);
       return;
     }
 
     if(h.startsWith('/travels')){
-      uninstallScrollReveal();
+      uninstallHomeBottomToggle();
       show('travels');
       var g={};
       listTravelAll(m).forEach(f=>(g[f.folder]||(g[f.folder]=[])).push(f));
@@ -384,8 +409,9 @@
       for(var folder in g){
         var files=g[folder];
         var card=document.createElement('article');card.className='place';
-        var starred = files[0];
-        card.appendChild(Object.assign(new Image(),{src:starred.src,alt:folder}));
+        var chosen = files.find(function(f){ return endsWithToken(f.alt,'chosenstar'); });
+        var starred = chosen || files.find(function(f){ return endsWithToken(f.alt,'star'); }) || files[0];
+        card.appendChild(starred.type==='video'?makeVideo(starred.src):Object.assign(new Image(),{src:starred.src,alt:folder}));
         var ov=document.createElement('div');ov.className='overlay';
         ov.innerHTML='<h4>'+folder+'</h4><p>'+files.length+' files</p><a class="chip" href="#/travel/'+encodeURIComponent(folder)+'">View</a>';
         card.appendChild(ov);
@@ -395,20 +421,29 @@
     }
 
     if(h.startsWith('/travel/')){
-      uninstallScrollReveal();
+      uninstallHomeBottomToggle();
       var folder=decodeURIComponent(h.split('/')[2]);
       show('album'); byId('albumTitle').textContent=folder;
-      mountGrid('albumGrid',listAlbum(m,folder));
+      mountGrid('albumGrid',listAlbum(m,folder),openLightbox);
       return;
     }
 
     // HOME
     show('home');
     var gridEl = mountHomeGrid('streamGrid', listHomepage());
-    installScrollReveal(gridEl); // smooth reveal on scroll down/up
+    uninstallHomeBottomToggle(gridEl);
+    installHomeBottomToggle(gridEl); // gallery fills blank space only at bottom
+    // hero image
   }
 
   function boot(){
+    // lightbox
+    (function setupLightbox(){
+      var lightboxEl=document.getElementById('lightbox');
+      lightboxEl.addEventListener('click',e=>{ if(e.target===lightboxEl||e.target.classList.contains('close')) lightboxEl.classList.remove('open'); });
+      document.addEventListener('keydown',e=>{ if(e.key==='Escape') lightboxEl.classList.remove('open'); });
+    })();
+
     loadManifest().then(m=>{
       document.getElementById('heroImg').src=heroFromProfile(m);
       routeWith(m);
