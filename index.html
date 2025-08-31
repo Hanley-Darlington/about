@@ -42,14 +42,11 @@
 
     /* Header (clickable to Home) */
     header{
-      position:sticky;
-      top:0;
-      z-index:9999;
+      position:sticky; top:0; z-index:9999;
       background:rgba(15,21,36,.78);
       backdrop-filter:saturate(150%) blur(12px);
       border-bottom:1px solid rgba(255,255,255,.08);
-      cursor:pointer;
-      isolation:isolate;
+      cursor:pointer; isolation:isolate;
     }
 
     .nav{display:flex;justify-content:flex-end;align-items:center;padding:14px 28px;gap:12px}
@@ -131,9 +128,9 @@
 <script>
   // Make header clickable for Home
   (function(){
-    var hdr = document.querySelector('header');
+    const hdr = document.querySelector('header');
     if(!hdr) return;
-    hdr.addEventListener('click', function(e){
+    hdr.addEventListener('click', (e)=>{
       if(e.target.closest('a')) return; // don’t block links
       location.hash = '#/';
     }, true);
@@ -202,121 +199,144 @@
 <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
 
 <script>
-(function(){
+(()=>{
   'use strict';
 
-  var GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
-  var IMG_EXT=['.jpg','.jpeg','.png','.webp','.gif','.avif'];
-  var VIDEO_EXT=['.mp4','.webm'];
+  /* ---------- small, reusable helpers ---------- */
+  const GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
+  const IMG_EXT=['.jpg','.jpeg','.png','.webp','.gif','.avif'];
+  const VIDEO_EXT=['.mp4','.webm'];
+  const $ = (id)=>document.getElementById(id);
+  const isMobile = ()=> window.matchMedia('(max-width:700px)').matches;
 
-  function rawURL(path){ return 'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path)+'?v='+Date.now(); }
-  function hasExt(n,exts){n=(n||'').toLowerCase();for(var i=0;i<exts.length;i++){if(n.endsWith(exts[i]))return true;}return false;}
-  function isImg(n){return hasExt(n,IMG_EXT);} function isVideo(n){return hasExt(n,VIDEO_EXT);} function isMedia(n){return isImg(n)||isVideo(n);}
-  function cacheGet(){return null;} function cacheSet(){}
+  const hasExt = (n, exts)=>{
+    n=(n||'').toLowerCase();
+    for(let i=0;i<exts.length;i++) if(n.endsWith(exts[i])) return true;
+    return false;
+  };
+  const isImg   = (n)=>hasExt(n,IMG_EXT);
+  const isVideo = (n)=>hasExt(n,VIDEO_EXT);
+  const isMedia = (n)=>isImg(n)||isVideo(n);
 
-  function endsWithToken(path, token){
-    var base = (path||'').split('/').pop().toLowerCase();
-    var dot = base.lastIndexOf('.');
-    var name = dot >= 0 ? base.slice(0, dot) : base;
+  const rawURL = (path)=> 'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path)+'?v='+Date.now();
+
+  const endsWithToken = (path, token)=>{
+    const base=(path||'').split('/').pop().toLowerCase();
+    const dot = base.lastIndexOf('.');
+    const name = dot>=0 ? base.slice(0,dot) : base;
     return name.endsWith(String(token).toLowerCase());
-  }
+  };
 
-  function fetchJSON(url){return fetch(url,{headers:{'Accept':'application/vnd.github+json'}}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+  const fetchJSON = (url)=> fetch(url,{headers:{'Accept':'application/vnd.github+json'}})
+    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
 
-  function buildManifestFromTree(tree){
-    var f=tree&&tree.tree?tree.tree:[];
-    var m={portfolio:[],travels:{},profile:[]};
-    for(var i=0;i<f.length;i++){
-      var it=f[i];
-      if(it.type!=='blob'||!isMedia(it.path)) continue;
+  /* ---------- manifest ---------- */
+  const buildManifestFromTree = (tree)=>{
+    const f = tree && tree.tree ? tree.tree : [];
+    const m = { portfolio:[], travels:{}, profile:[] };
+    for(let i=0;i<f.length;i++){
+      const it=f[i];
+      if(it.type!=='blob' || !isMedia(it.path)) continue;
       if(it.path.startsWith('portfolio/')) m.portfolio.push(it.path);
       else if(it.path.startsWith('travels/')){
-        var parts=it.path.split('/');
+        const parts=it.path.split('/');
         if(parts.length>=3){
-          var folder=decodeURIComponent(parts[1]);
+          const folder=decodeURIComponent(parts[1]);
           (m.travels[folder]||(m.travels[folder]=[])).push(it.path);
         }
-      }else if(it.path.startsWith('profile/')) m.profile.push(it.path);
+      } else if(it.path.startsWith('profile/')) m.profile.push(it.path);
     }
     return m;
-  }
+  };
 
-  function loadManifest(){
-    return fetch('/manifest.json',{cache:'no-store'})
-      .then(r=>{if(r.ok)return r.json();throw new Error('no manifest');})
-      .catch(()=>fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
-        .then(c=>fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+c.commit.tree.sha+'?recursive=1'))
-        .then(buildManifestFromTree));
-  }
+  const loadManifest = ()=> fetch('/manifest.json',{cache:'no-store'})
+    .then(r=>{ if(r.ok) return r.json(); throw new Error('no manifest'); })
+    .catch(()=> fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
+      .then(c=> fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+c.commit.tree.sha+'?recursive=1'))
+      .then(buildManifestFromTree));
 
-  function listPortfolio(m){return m.portfolio.map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));}
-  function listTravelAll(m){
-    var out=[];
-    for(var f in m.travels){
-      m.travels[f].forEach(p=>out.push({src:rawURL(p),alt:p.split('/').pop(),folder:f,type:isVideo(p)?'video':'image'}));
+  const listPortfolio = (m)=> m.portfolio.map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));
+  const listTravelAll = (m)=>{
+    const out=[];
+    for(const f in m.travels){
+      m.travels[f].forEach(p=> out.push({src:rawURL(p),alt:p.split('/').pop(),folder:f,type:isVideo(p)?'video':'image'}));
     }
     return out;
-  }
-  function listAlbum(m,folder){return (m.travels[folder]||[]).map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));}
+  };
+  const listAlbum = (m,folder)=> (m.travels[folder]||[]).map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));
 
-  // hero prefers profile image ending in *star, else falls back
-  function heroFromProfile(m){
-    var pics=m.profile.filter(isImg);
-    var starPic = pics.find(function(p){ return endsWithToken(p,'star'); });
+  const heroFromProfile = (m)=>{
+    const pics = m.profile.filter(isImg);
+    const starPic = pics.find(p=>endsWithToken(p,'star'));
     return starPic ? rawURL(starPic) : (pics.length ? rawURL(pics[0]) : '/profile/profile-star.webp');
-  }
+  };
 
-  function byId(id){return document.getElementById(id);} function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
-  function makeVideo(src){var v=document.createElement('video');v.src=src;v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.controls=false;return v;}
+  /* ---------- UI helpers ---------- */
+  const clear = (el)=>{ while(el.firstChild) el.removeChild(el.firstChild); };
+  const makeVideo = (src)=> {
+    const v=document.createElement('video');
+    v.src=src; v.muted=true; v.loop=true; v.autoplay=true; v.playsInline=true; v.controls=false;
+    return v;
+  };
 
-  // AOS mapping for the HOME grid (3 cols × 3 rows pattern)
-  function homeAnim(index){
-    var row = Math.floor(index / 3);
-    var col = index % 3;
-    if(row === 0){ return col === 0 ? 'zoom-in-left' : col === 1 ? 'zoom-in-down' : 'zoom-in-right'; }
-    if(row === 1){ return col === 0 ? 'zoom-in-left' : col === 1 ? 'zoom-in'      : 'zoom-in-right'; }
-    if(row === 2){ return col === 0 ? 'zoom-in-left' : col === 1 ? 'zoom-in-up'   : 'zoom-in-right'; }
+  // AOS mapping for the HOME grid (3 cols × 3 rows)
+  const homeAnim = (i)=>{
+    const row = (i/3)|0, col = i%3;
+    if(row===0) return col===0?'zoom-in-left':(col===1?'zoom-in-down':'zoom-in-right');
+    if(row===1) return col===0?'zoom-in-left':(col===1?'zoom-in':'zoom-in-right');
+    if(row===2) return col===0?'zoom-in-left':(col===1?'zoom-in-up':'zoom-in-right');
     return 'zoom-in';
-  }
+  };
 
-  function mountGrid(id,files,onClick){
-    var el=byId(id); clear(el);
+  const mountGrid = (id, files, onClick)=>{
+    const el=$(id); clear(el);
     if(!files.length){
-      var p=document.createElement('p');p.textContent='Nothing yet.';p.style.color='#9aa7bd';el.appendChild(p);return;
+      const p=document.createElement('p'); p.textContent='Nothing yet.'; p.style.color='#9aa7bd'; el.appendChild(p); return;
     }
-    files.forEach(function(f,i){
-      var fig=document.createElement('figure');fig.className='shot';
-      var anim = (id==='streamGrid') ? homeAnim(i) : 'zoom-in';
-      fig.setAttribute('data-aos', anim);
 
-      var node=f.type==='video'?makeVideo(f.src):(Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'}));
-      if(onClick) fig.addEventListener('click',()=>onClick(f));
+    const addAOSHome = (i)=>{ if(!isMobile()) return homeAnim(i); return null; };
+
+    for(let i=0;i<files.length;i++){
+      const f=files[i];
+      const fig=document.createElement('figure'); fig.className='shot';
+
+      // Home stream: desktop/tablet only; other pages: simple zoom-in
+      if(id==='streamGrid'){
+        const anim = addAOSHome(i);
+        if(anim) fig.setAttribute('data-aos', anim);
+      } else {
+        fig.setAttribute('data-aos','zoom-in');
+      }
+
+      const node = f.type==='video'? makeVideo(f.src) : Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'});
+      if(onClick) fig.addEventListener('click', ()=>onClick(f));
       fig.appendChild(node);
       el.appendChild(fig);
-    });
+    }
     if(window.AOS && AOS.refresh) AOS.refresh();
-  }
+  };
 
   // lightbox
-  var lightboxEl;
-  function setupLightbox(){
-    lightboxEl=byId('lightbox');
-    lightboxEl.addEventListener('click',e=>{if(e.target===lightboxEl||e.target.classList.contains('close'))closeLightbox();});
-    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox();});
-  }
-  function openLightbox(f){
+  let lightboxEl;
+  const setupLightbox = ()=>{
+    lightboxEl=$('lightbox');
+    lightboxEl.addEventListener('click',e=>{ if(e.target===lightboxEl || e.target.classList.contains('close')) closeLightbox(); }, {passive:true});
+    document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeLightbox(); });
+  };
+  const openLightbox = (f)=>{
     lightboxEl.innerHTML='<button class="close">✕</button>';
-    if(f.type==='video'){var v=makeVideo(f.src);v.controls=true;lightboxEl.appendChild(v);}
-    else{var img=new Image();img.src=f.src;img.alt=f.alt;lightboxEl.appendChild(img);}
+    if(f.type==='video'){ const v=makeVideo(f.src); v.controls=true; lightboxEl.appendChild(v); }
+    else{ const img=new Image(); img.src=f.src; img.alt=f.alt; lightboxEl.appendChild(img); }
     lightboxEl.classList.add('open');
-  }
-  function closeLightbox(){lightboxEl.classList.remove('open');}
+  };
+  const closeLightbox = ()=> lightboxEl.classList.remove('open');
 
-  var views={home:byId('view-home'),portfolio:byId('view-portfolio'),travels:byId('view-travels'),album:byId('view-album')};
-  function show(v){Object.values(views).forEach(x=>x.classList.add('hidden'));views[v].classList.remove('hidden');scrollTo(0,0);}
+  const views={home:$('view-home'),portfolio:$('view-portfolio'),travels:$('view-travels'),album:$('view-album')};
+  const show = (v)=>{ for(const k in views) views[k].classList.add('hidden'); views[v].classList.remove('hidden'); scrollTo(0,0); };
 
-  function routeWith(m){
-    var h=(location.hash||'').slice(1);
+  /* ---------- Routing ---------- */
+  const routeWith = (m)=>{
+    const h=(location.hash||'').slice(1);
 
     if(h.startsWith('/portfolio')){
       show('portfolio');
@@ -326,15 +346,15 @@
 
     if(h.startsWith('/travels')){
       show('travels');
-      var g={};
-      listTravelAll(m).forEach(f=>(g[f.folder]||(g[f.folder]=[])).push(f));
-      var wrap=byId('travelCards');clear(wrap);
-      for(var folder in g){
-        var files=g[folder];
-        var starred = files.find(function(f){ return endsWithToken(f.alt,'star'); }) || files[0];
-        var card=document.createElement('article');card.className='place'; card.setAttribute('data-aos','zoom-in');
+      const g={};
+      listTravelAll(m).forEach(f=> (g[f.folder]||(g[f.folder]=[])).push(f));
+      const wrap=$('travelCards'); clear(wrap);
+      for(const folder in g){
+        const files=g[folder];
+        const starred = files.find(f=>endsWithToken(f.alt,'star')) || files[0];
+        const card=document.createElement('article'); card.className='place'; card.setAttribute('data-aos','zoom-in');
         card.appendChild(starred.type==='video'?makeVideo(starred.src):Object.assign(new Image(),{src:starred.src,alt:folder}));
-        var ov=document.createElement('div');ov.className='overlay';
+        const ov=document.createElement('div'); ov.className='overlay';
         ov.innerHTML='<h4>'+folder+'</h4><p>'+files.length+' files</p><a class="chip" href="#/travel/'+encodeURIComponent(folder)+'">View</a>';
         card.appendChild(ov);
         wrap.appendChild(card);
@@ -344,63 +364,60 @@
     }
 
     if(h.startsWith('/travel/')){
-      var folder=decodeURIComponent(h.split('/')[2]);
-      show('album');byId('albumTitle').textContent=folder;
+      const folder=decodeURIComponent(h.split('/')[2]);
+      show('album'); $('albumTitle').textContent=folder;
       mountGrid('albumGrid',listAlbum(m,folder),openLightbox);
       return;
     }
 
-    // HOME: show only *star items; fallback to all; cap to 12
+    // HOME: star-first, fallback to all; cap to 12
     show('home');
-    var all=[].concat(listPortfolio(m),listTravelAll(m));
-    var starredOnly = all.filter(function(f){ return endsWithToken(f.alt,'star'); });
-    var stream = (starredOnly.length ? starredOnly : all).slice(0,12);
-    mountGrid('streamGrid',stream,function(f){
-      if(f.folder) location.hash='#/travel/'+encodeURIComponent(f.folder);
-      else location.hash='#/portfolio';
-    });
-  }
+    const all=[...listPortfolio(m),...listTravelAll(m)];
+    const starredOnly = all.filter(f=>endsWithToken(f.alt,'star'));
+    const stream = (starredOnly.length ? starredOnly : all).slice(0,12);
+    mountGrid('streamGrid',stream,(f)=>{ location.hash = f.folder ? '#/travel/'+encodeURIComponent(f.folder) : '#/portfolio'; });
+  };
 
-  // Enable AOS ONLY when the bottom of the home page is reached
-  function enableAOSOnce(){
+  /* ---------- AOS enable only after bottom-of-home ---------- */
+  const enableAOSOnce = ()=>{
     if(document.body.classList.contains('aos-ready')) return;
     document.body.classList.add('aos-ready');
     if(window.AOS){
       AOS.init({ once:true, duration:500, easing:'ease-out' });
       if(AOS.refresh) AOS.refresh();
     }
-  }
+  };
 
-  function initAOSOnHomeBottom(){
-    var sentinel = document.getElementById('home-bottom-sentinel');
+  const initAOSOnHomeBottom = ()=>{
+    const sentinel = $('home-bottom-sentinel');
     if(!('IntersectionObserver' in window) || !sentinel){
-      // Fallback: if no IO, enable immediately at end of load
       window.addEventListener('load', enableAOSOnce, { once:true });
       return;
     }
-    var seen=false;
-    var io = new IntersectionObserver(function(entries){
-      entries.forEach(function(entry){
-        if(entry.isIntersecting && !seen){
-          seen=true;
-          io.disconnect();
-          enableAOSOnce();
+    let seen=false;
+    const io = new IntersectionObserver((entries)=>{
+      if(seen) return;
+      for(const e of entries){
+        if(e.isIntersecting){
+          seen=true; io.disconnect(); enableAOSOnce();
+          break;
         }
-      });
+      }
     }, { root:null, threshold:0.6 });
     io.observe(sentinel);
-  }
+  };
 
-  function boot(){
+  /* ---------- Boot ---------- */
+  const boot = ()=>{
     setupLightbox();
-    initAOSOnHomeBottom(); // <-- only after bottom of home is reached
-    loadManifest().then(function(m){
-      // If a different profile-star exists in repo, this can replace the local src
-      document.getElementById('heroImg').src = heroFromProfile(m);
+    initAOSOnHomeBottom();
+    loadManifest().then((m)=>{
+      // If repo also has a profile-star, this may swap the initial /profile/ image
+      $('heroImg').src = heroFromProfile(m);
       routeWith(m);
-      window.addEventListener('hashchange',()=>routeWith(m));
+      window.addEventListener('hashchange', ()=>routeWith(m));
     });
-  }
+  };
   boot();
 })();
 </script>
