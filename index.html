@@ -68,7 +68,7 @@
     .back{padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14)}
 
     .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px}
-    .shot{border-radius:var(--radius);overflow:hidden;background:#111;box-shadow:var(--shadow);cursor:zoom-in} /* cursor: zoom-in for clarity */
+    .shot{border-radius:var(--radius);overflow:hidden;background:#111;box-shadow:var(--shadow);cursor:zoom-in}
 
     #streamGrid .shot, #portfolioGrid .shot { aspect-ratio:16/9; }
     #streamGrid .shot img, #streamGrid .shot video,
@@ -93,32 +93,27 @@
     .footer-center{display:flex;flex-direction:column;align-items:center;gap:10px}
     .social{display:flex;gap:10px}
 
-    /* Hover (desktop) */
     @media (hover:hover) and (pointer:fine){
       .shot{transition: transform .18s ease, box-shadow .18s ease;will-change: transform;}
       .shot:hover{transform: translateY(-4px) scale(1.02);box-shadow: 0 20px 50px rgba(0,0,0,.6);}
       .shot:focus-visible{outline: 2px solid var(--brand);outline-offset: 2px;}
     }
 
-    /* Lightbox above header */
-    .lightbox{position: fixed; inset: 0; z-index: 10000; /* ↑ */ display: none; align-items: center; justify-content: center;background: rgba(0,0,0,.82); padding: 20px;}
+    .lightbox{position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center;background: rgba(0,0,0,.82); padding: 20px;}
     .lightbox.open{ display: flex; }
     .lightbox img, .lightbox video{max-width: min(1200px, 95vw);max-height: 90vh;border-radius: 16px;box-shadow: var(--shadow);background:#000;}
     .lightbox .close{position: absolute; top: 14px; right: 14px;padding: 8px 12px; border-radius: 999px;background: rgba(255,255,255,.12);border: 1px solid rgba(255,255,255,.18);color: #fff; cursor: pointer;}
 
-    /* ---------- Desktop-only blank space under hero ---------- */
     .home-spacer{display:none;}
     @media (hover:hover) and (pointer:fine){
       .home-spacer{display:block;height:var(--home-spacer);}
     }
 
-    /* Prevent first-paint flash of the home grid on desktop */
     @media (hover:hover) and (pointer:fine){
-      #streamGrid{ display:none; }          /* hidden at first paint */
-      #streamGrid.is-on{ display:grid; }    /* JS enables this */
+      #streamGrid{ display:none; }
+      #streamGrid.is-on{ display:grid; }
     }
 
-    /* ---------- Lightweight AOS-like animations (slower) ---------- */
     .anim-wrap{display:block;will-change:transform,opacity}
     .anim-play.zoom-in        {animation:zin 1.2s ease-out both}
     .anim-play.zoom-in-up     {animation:zinUp 1.2s ease-out both}
@@ -140,7 +135,7 @@
       .anim-play.zoom-in-right{animation:none}
     }
 
-    /* -------- Safari <15 aspect-ratio fallback -------- */
+    /* Safari <15 aspect-ratio fallback */
     @supports not (aspect-ratio: 1 / 1) {
       #streamGrid .shot, #portfolioGrid .shot, #albumGrid .shot, .place { position: relative; }
       #streamGrid .shot::before, #portfolioGrid .shot::before, #albumGrid .shot::before, .place::before {
@@ -168,12 +163,11 @@
 </header>
 
 <script>
-  // Make header clickable for Home
   (function(){
     var hdr = document.querySelector('header');
     if(!hdr) return;
     hdr.addEventListener('click', function(e){
-      if(e.target.closest('a')) return; // don’t block links
+      if(e.target.closest('a')) return;
       location.hash = '#/';
     }, true);
   })();
@@ -187,9 +181,7 @@
         <div class="hero-card"><img id="heroImg" alt="Profile"></div>
       </div>
 
-      <!-- Blank area that will be filled by the gallery when you reach the bottom -->
       <div class="home-spacer" id="homeSpacer" aria-hidden="true"></div>
-
       <div class="gallery stream-grid" id="streamGrid"></div>
     </div>
   </section>
@@ -280,28 +272,42 @@
   function listTravelAll(m){var out=[];for(var f in m.travels){m.travels[f].forEach(p=>out.push({src:rawURL(p),alt:p.split('/').pop(),folder:f,type:isVideo(p)?'video':'image'}));}return out;}
   function listAlbum(m,folder){return (m.travels[folder]||[]).map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));}
 
-  /* ------- HOMEPAGE SLOTS: prefer mp4, fallback to webp ------- */
+  /* ------- HOMEPAGE SLOTS: WebP first, then MP4, with timeouts ------- */
   function detectHomepageItem(i){
     return new Promise(function(resolve){
       var mp4 = '/homepage/'+i+'.mp4';
       var webp = '/homepage/'+i+'.webp';
+      var settled = false;
+      function done(val){ if(!settled){ settled = true; resolve(val); } }
 
-      var v = document.createElement('video');
-      v.preload = 'metadata';
-      v.src = mp4;
+      // 1) Try WebP (fast path on iOS)
+      var img = new Image();
+      var imgTimeout = setTimeout(function(){
+        img.onload = img.onerror = null;
+        tryMp4(); // fall back if WebP stalls
+      }, 1800);
+      img.onload = function(){ clearTimeout(imgTimeout); done({type:'image', src:webp, alt:'home-'+i}); };
+      img.onerror = function(){ clearTimeout(imgTimeout); tryMp4(); };
+      img.src = webp;
 
-      function ok(){ cleanup(); resolve({type:'video', src:mp4, alt:'home-'+i}); }
-      function tryWebp(){
-        var img = new Image();
-        img.onload  = function(){ resolve({type:'image', src:webp, alt:'home-'+i}); };
-        img.onerror = function(){ resolve(null); }; // skip tile if neither works
-        img.src = webp;
-        cleanup();
+      // 2) Fallback to MP4 with a timeout
+      function tryMp4(){
+        if (settled) return;
+        var v = document.createElement('video');
+        v.preload = 'metadata';
+        v.muted = true; v.setAttribute('muted','');
+        v.playsInline = true; v.setAttribute('playsinline','');
+        var vidTimeout = setTimeout(function(){
+          cleanup();
+          done(null); // give up on this slot
+        }, 2000);
+        function ok(){ clearTimeout(vidTimeout); cleanup(); done({type:'video', src:mp4, alt:'home-'+i}); }
+        function fail(){ clearTimeout(vidTimeout); cleanup(); done(null); }
+        function cleanup(){ v.onloadedmetadata = v.onerror = null; v.removeAttribute('src'); try{ v.load(); }catch(e){} }
+        v.onloadedmetadata = ok;
+        v.onerror = fail;
+        v.src = mp4;
       }
-      function cleanup(){ v.onloadeddata = v.onerror = null; v.removeAttribute('src'); try{ v.load(); }catch(e){} }
-
-      v.onloadeddata = ok;
-      v.onerror = tryWebp;
     });
   }
   function listHomepageMixed(){
@@ -351,8 +357,8 @@
     files.forEach(function(f,idx){
       var wrap = document.createElement('div'); wrap.className='anim-wrap '+animOrder[idx];
       var fig=document.createElement('figure'); fig.className='shot';
-      fig.tabIndex = 0;                       // ★ focusable for keyboard open
-      fig.dataset.type = f.type;              // ★ store payload for lightbox
+      fig.tabIndex = 0;
+      fig.dataset.type = f.type;
       fig.dataset.src  = f.src;
       fig.dataset.alt  = f.alt || '';
 
@@ -368,7 +374,6 @@
     return el;
   }
 
-  // ★ One-time event delegation for homepage lightbox
   function bindHomeLightbox(gridEl){
     if(gridEl.__lbBound) return;
     gridEl.__lbBound = true;
@@ -386,7 +391,6 @@
     });
   }
 
-  // Lightbox
   var lightboxEl;
   function setupLightbox(){
     lightboxEl=byId('lightbox');
@@ -406,8 +410,8 @@
 
   /* ---------- Desktop scroll-to-bottom toggle ---------- */
   var homeScrollHandler=null, animEnabled=false;
-  var ROW_STAGGER = 250;  // ms between rows (slower)
-  var COL_STAGGER = 100;  // ms between cols (slower)
+  var ROW_STAGGER = 250;
+  var COL_STAGGER = 100;
 
   function atBottom(){
     var doc = document.documentElement;
@@ -418,10 +422,10 @@
     if(animEnabled) return;
     var spacer = byId('homeSpacer');
     if(spacer) spacer.style.display='none';
-    gridEl.classList.add('is-on'); // show via class
+    gridEl.classList.add('is-on');
 
     gridEl.querySelectorAll('.anim-wrap').forEach(function(w,i){
-      w.classList.remove('anim-play'); void w.offsetWidth; // restart
+      w.classList.remove('anim-play'); void w.offsetWidth;
       w.style.animationDelay = (Math.floor(i/4)*ROW_STAGGER + (i%4)*COL_STAGGER)+'ms';
       w.classList.add('anim-play');
     });
@@ -430,7 +434,7 @@
 
   function disableHome(gridEl){
     var spacer = byId('homeSpacer'); if(spacer) spacer.style.display='';
-    gridEl.classList.remove('is-on'); // hide
+    gridEl.classList.remove('is-on');
     if(!animEnabled) return;
     gridEl.querySelectorAll('.anim-wrap').forEach(function(w){
       w.classList.remove('anim-play');
@@ -440,12 +444,11 @@
   }
 
   function installHomeBottomToggle(gridEl){
-    if(!isDesktop){ // mobile: show grid, no animations
+    if(!isDesktop){
       byId('homeSpacer').style.display='none';
       gridEl.classList.add('is-on');
       return;
     }
-    // start with blank space + hidden grid
     disableHome(gridEl);
     function onScroll(){
       if(atBottom()) enableHome(gridEl);
@@ -453,7 +456,7 @@
     }
     homeScrollHandler = onScroll;
     window.addEventListener('scroll', onScroll, {passive:true});
-    onScroll(); // initial state
+    onScroll();
   }
   function uninstallHomeBottomToggle(gridEl){
     if(homeScrollHandler){ window.removeEventListener('scroll', homeScrollHandler); homeScrollHandler=null; }
@@ -461,7 +464,6 @@
     if(gridEl){ gridEl.classList.add('is-on'); gridEl.querySelectorAll('.anim-wrap').forEach(w=>w.classList.remove('anim-play')); }
     animEnabled=false;
   }
-  /* ---------------------------------------------------- */
 
   function routeWith(m){
     var h=(location.hash||'').slice(1);
@@ -469,7 +471,7 @@
     if(h.startsWith('/portfolio')){
       uninstallHomeBottomToggle();
       show('portfolio');
-      mountGrid('portfolioGrid',listPortfolio(m),openLightbox); // ★ keep clickable
+      mountGrid('portfolioGrid',listPortfolio(m),openLightbox);
       return;
     }
 
@@ -496,7 +498,7 @@
       uninstallHomeBottomToggle();
       var folder=decodeURIComponent(h.split('/')[2]);
       show('album'); byId('albumTitle').textContent=folder;
-      mountGrid('albumGrid',listAlbum(m,folder),openLightbox); // ★ keep clickable
+      mountGrid('albumGrid',listAlbum(m,folder),openLightbox);
       return;
     }
 
@@ -504,11 +506,10 @@
     show('home');
     uninstallHomeBottomToggle();
 
-    // Build mixed mp4/webp list, then mount and hook scroll + lightbox
     listHomepageMixed().then(function(files){
       var gridEl = mountHomeGrid('streamGrid', files);
-      bindHomeLightbox(gridEl);           // ★ enable click
-      installHomeBottomToggle(gridEl);    // bottom-trigger animation
+      bindHomeLightbox(gridEl);
+      installHomeBottomToggle(gridEl);
     });
   }
 
