@@ -262,10 +262,8 @@
   var views={home:byId('view-home'),portfolio:byId('view-portfolio'),travels:byId('view-travels'),album:byId('view-album')};
   function show(v){Object.values(views).forEach(x=>x.classList.add('hidden'));views[v].classList.remove('hidden');scrollTo(0,0);}
 
-  // --- AOS control (desktop homepage only; enable after scroll past hero; disable when above) ---
+  // --- AOS control (desktop homepage only, appears after scrolling past hero, removed when back up) ---
   var homeScrollHandler = null;
-
-  // assign mapping and prepare elements so they will animate on first enable
   function mapHomeAOS(gridEl){
     if(!isDesktop || !window.AOS) return; // desktop only
     var anim = [
@@ -275,52 +273,27 @@
     ];
     var shots = Array.prototype.slice.call(gridEl.querySelectorAll('.shot'));
     shots.forEach(function(fig, i){
-      // reset first
-      fig.removeAttribute('data-aos');
-      fig.classList.remove('aos-init','aos-animate');
-      // set mapping
+      fig.removeAttribute('data-aos'); // clear first
       if(anim[i]) fig.setAttribute('data-aos', anim[i]);
-      // force "pre-animation" state so init will actually transition,
-      // but keep them visible until AOS takes over
-      fig.style.willChange = 'transform, opacity';
     });
   }
-
   function clearAOSIn(el){
     if(!window.AOS) return;
-    el.querySelectorAll('[data-aos]').forEach(function(n){
-      n.removeAttribute('data-aos');
-      n.classList.remove('aos-init','aos-animate');
-      n.style.willChange = '';
-    });
-    AOS.refreshHard();
+    el.querySelectorAll('[data-aos]').forEach(function(n){ n.removeAttribute('data-aos'); });
+    AOS.refreshHard(); // purge
   }
-
-  // turn on AOS after user scrolls past hero
   function enableHomeAOS(gridEl){
     mapHomeAOS(gridEl);
-    // Let attributes apply, then init AOS so items already in view will animate
-    requestAnimationFrame(function(){
-      AOS.init({
-        once: false,
-        duration: 600,
-        easing: 'ease-out-cubic',
-        offset: 80,
-        // never run on non-home or non-desktop
-        disable: function(){ return !isDesktop || location.hash.slice(1) !== '/'; }
-      });
-      AOS.refreshHard();
-    });
+    AOS.init({ once:false, duration:600, easing:'ease-out-cubic', offset:80 });
+    AOS.refresh();
   }
-
   function disableHomeAOS(gridEl){
-    clearAOSIn(gridEl || document);
+    clearAOSIn(gridEl);
   }
-
   function installHomeScrollToggle(gridEl){
     if(!isDesktop || !window.AOS) return;
     var hero = document.getElementById('homeHero');
-    var threshold = hero.offsetTop + hero.offsetHeight - 60; // bottom of hero buffer
+    var threshold = hero.offsetTop + hero.offsetHeight - 60;
     var enabled = false;
 
     function onScroll(){
@@ -331,13 +304,10 @@
         disableHomeAOS(gridEl); enabled = false;
       }
     }
-    // start clean on load (no animations until scroll)
-    disableHomeAOS(gridEl);
+    onScroll(); // set initial state
     window.addEventListener('scroll', onScroll, { passive:true });
     homeScrollHandler = onScroll;
-    onScroll(); // set initial state
   }
-
   function uninstallHomeScrollToggle(){
     if(homeScrollHandler){
       window.removeEventListener('scroll', homeScrollHandler);
@@ -351,6 +321,7 @@
 
     if(h.startsWith('/portfolio')){
       uninstallHomeScrollToggle();
+      // ensure no AOS on other pages
       disableHomeAOS(document);
       show('portfolio');
       mountGrid('portfolioGrid',listPortfolio(m),openLightbox);
@@ -390,7 +361,7 @@
     // HOME: strictly 12 images from /homepage/
     show('home');
     var gridEl = mountGrid('streamGrid', listHomepage(), function(){ /* no click-through for homepage tiles */ });
-    // AOS: install scroll toggle so animations appear only after scrolling past hero, disappear when back up
+    // AOS: install scroll toggle so animations appear near bottom, disappear when back up
     uninstallHomeScrollToggle();
     disableHomeAOS(gridEl); // start clean
     installHomeScrollToggle(gridEl);
@@ -409,4 +380,3 @@
 </script>
 </body>
 </html>
-
