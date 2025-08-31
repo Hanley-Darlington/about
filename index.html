@@ -111,13 +111,19 @@
       .home-spacer{display:block;height:var(--home-spacer);}
     }
 
-    /* ---------- Lightweight AOS-like animations ---------- */
+    /* Prevent first-paint flash of the home grid on desktop */
+    @media (hover:hover) and (pointer:fine){
+      #streamGrid{ display:none; }          /* hidden at first paint */
+      #streamGrid.is-on{ display:grid; }    /* JS enables this */
+    }
+
+    /* ---------- Lightweight AOS-like animations (slower) ---------- */
     .anim-wrap{display:block;will-change:transform,opacity}
-    .anim-play.zoom-in        {animation:zin .6s ease-out both}
-    .anim-play.zoom-in-up     {animation:zinUp .6s ease-out both}
-    .anim-play.zoom-in-down   {animation:zinDown .6s ease-out both}
-    .anim-play.zoom-in-left   {animation:zinLeft .6s ease-out both}
-    .anim-play.zoom-in-right  {animation:zinRight .6s ease-out both}
+    .anim-play.zoom-in        {animation:zin 1.2s ease-out both}
+    .anim-play.zoom-in-up     {animation:zinUp 1.2s ease-out both}
+    .anim-play.zoom-in-down   {animation:zinDown 1.2s ease-out both}
+    .anim-play.zoom-in-left   {animation:zinLeft 1.2s ease-out both}
+    .anim-play.zoom-in-right  {animation:zinRight 1.2s ease-out both}
 
     @keyframes zin      {from{opacity:0;transform:scale(.92)}         to{opacity:1;transform:none}}
     @keyframes zinUp    {from{opacity:0;transform:translateY(24px) scale(.92)}   to{opacity:1;transform:none}}
@@ -169,7 +175,7 @@
       <!-- Blank area that will be filled by the gallery when you reach the bottom -->
       <div class="home-spacer" id="homeSpacer" aria-hidden="true"></div>
 
-      <div class="gallery stream-grid" id="streamGrid"><p style="color:#9aa7bd">Loading photos…</p></div>
+      <div class="gallery stream-grid" id="streamGrid"></div>
     </div>
   </section>
 
@@ -259,10 +265,33 @@
   function listTravelAll(m){var out=[];for(var f in m.travels){m.travels[f].forEach(p=>out.push({src:rawURL(p),alt:p.split('/').pop(),folder:f,type:isVideo(p)?'video':'image'}));}return out;}
   function listAlbum(m,folder){return (m.travels[folder]||[]).map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));}
 
-  // Homepage images: /homepage/1..12.webp
-  function listHomepage(){
-    var arr=[]; for(var i=1;i<=12;i++) arr.push({src:'/homepage/'+i+'.webp',alt:'home-'+i,type:'image'});
-    return arr;
+  /* ------- HOMEPAGE SLOTS: prefer mp4, fallback to webp ------- */
+  function detectHomepageItem(i){
+    return new Promise(function(resolve){
+      var mp4 = '/homepage/'+i+'.mp4';
+      var webp = '/homepage/'+i+'.webp';
+
+      var v = document.createElement('video');
+      v.preload = 'metadata';
+      v.src = mp4;
+
+      function ok(){ resolve({type:'video', src:mp4, alt:'home-'+i}); cleanup(); }
+      function fail(){
+        var img = new Image();
+        img.src = webp;
+        img.onload  = function(){ resolve({type:'image', src:webp, alt:'home-'+i}); };
+        img.onerror = function(){ resolve({type:'image', src:webp, alt:'home-'+i}); }; // last resort
+        cleanup();
+      }
+      function cleanup(){ v.onloadeddata = v.onerror = null; v.removeAttribute('src'); v.load(); }
+
+      v.onloadeddata = ok;
+      v.onerror = fail;
+    });
+  }
+  function listHomepageMixed(){
+    var tasks=[]; for(var i=1;i<=12;i++) tasks.push(detectHomepageItem(i));
+    return Promise.all(tasks);
   }
 
   // hero prefers profile image ending in *star, else fallback
@@ -300,8 +329,15 @@
     files.forEach(function(f,idx){
       var wrap = document.createElement('div'); wrap.className='anim-wrap '+animOrder[idx];
       var fig=document.createElement('figure'); fig.className='shot';
-      var img=Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'});
-      fig.appendChild(img); wrap.appendChild(fig); el.appendChild(wrap);
+      if(f.type==='video'){
+        var v=document.createElement('video');
+        v.src=f.src; v.muted=true; v.loop=true; v.autoplay=true; v.playsInline=true; v.controls=false;
+        fig.appendChild(v);
+      }else{
+        var img=Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'});
+        fig.appendChild(img);
+      }
+      wrap.appendChild(fig); el.appendChild(wrap);
     });
     return el;
   }
@@ -326,6 +362,8 @@
 
   /* ---------- Desktop scroll-to-bottom toggle ---------- */
   var homeScrollHandler=null, animEnabled=false;
+  var ROW_STAGGER = 120;  // ms between rows (slower)
+  var COL_STAGGER = 80;   // ms between cols (slower)
 
   function atBottom(){
     var doc = document.documentElement;
@@ -334,30 +372,22 @@
 
   function enableHome(gridEl){
     if(animEnabled) return;
-    // Fill the blank space: hide spacer, show grid
     var spacer = byId('homeSpacer');
     if(spacer) spacer.style.display='none';
-    gridEl.style.display='grid';
-    // Start animations (wrappers)
+    gridEl.classList.add('is-on'); // show via class (prevents first-paint flash)
+
     gridEl.querySelectorAll('.anim-wrap').forEach(function(w,i){
       w.classList.remove('anim-play'); void w.offsetWidth; // restart
-      w.style.animationDelay = (Math.floor(i/4)*60 + (i%4)*30)+'ms';
+      w.style.animationDelay = (Math.floor(i/4)*ROW_STAGGER + (i%4)*COL_STAGGER)+'ms';
       w.classList.add('anim-play');
     });
     animEnabled=true;
   }
 
   function disableHome(gridEl){
-    if(!animEnabled) {
-      // keep spacer visible, grid hidden (cold state)
-      var spacer = byId('homeSpacer'); if(spacer) spacer.style.display='';
-      gridEl.style.display='none';
-      return;
-    }
-    // Put the blank space back and hide grid again
-    var spacer2 = byId('homeSpacer'); if(spacer2) spacer2.style.display='';
-    gridEl.style.display='none';
-    // stop animations
+    var spacer = byId('homeSpacer'); if(spacer) spacer.style.display='';
+    gridEl.classList.remove('is-on'); // hide immediately
+    if(!animEnabled) return;
     gridEl.querySelectorAll('.anim-wrap').forEach(function(w){
       w.classList.remove('anim-play');
       w.style.animationDelay='';
@@ -366,9 +396,9 @@
   }
 
   function installHomeBottomToggle(gridEl){
-    if(!isDesktop){ // mobile: just show grid normally, no animations
+    if(!isDesktop){ // mobile: show grid, no animations
       byId('homeSpacer').style.display='none';
-      gridEl.style.display='grid';
+      gridEl.classList.add('is-on');
       return;
     }
     // start with blank space + hidden grid
@@ -379,13 +409,12 @@
     }
     homeScrollHandler = onScroll;
     window.addEventListener('scroll', onScroll, {passive:true});
-    onScroll(); // set initial state
+    onScroll(); // initial state
   }
   function uninstallHomeBottomToggle(gridEl){
     if(homeScrollHandler){ window.removeEventListener('scroll', homeScrollHandler); homeScrollHandler=null; }
-    // clean state
     var spacer = byId('homeSpacer'); if(spacer) spacer.style.display='none';
-    if(gridEl){ gridEl.style.display='grid'; gridEl.querySelectorAll('.anim-wrap').forEach(w=>w.classList.remove('anim-play')); }
+    if(gridEl){ gridEl.classList.add('is-on'); gridEl.querySelectorAll('.anim-wrap').forEach(w=>w.classList.remove('anim-play')); }
     animEnabled=false;
   }
   /* ---------------------------------------------------- */
@@ -409,8 +438,7 @@
       for(var folder in g){
         var files=g[folder];
         var card=document.createElement('article');card.className='place';
-        var chosen = files.find(function(f){ return endsWithToken(f.alt,'chosenstar'); });
-        var starred = chosen || files.find(function(f){ return endsWithToken(f.alt,'star'); }) || files[0];
+        var starred = files[0];
         card.appendChild(starred.type==='video'?makeVideo(starred.src):Object.assign(new Image(),{src:starred.src,alt:folder}));
         var ov=document.createElement('div');ov.className='overlay';
         ov.innerHTML='<h4>'+folder+'</h4><p>'+files.length+' files</p><a class="chip" href="#/travel/'+encodeURIComponent(folder)+'">View</a>';
@@ -424,16 +452,19 @@
       uninstallHomeBottomToggle();
       var folder=decodeURIComponent(h.split('/')[2]);
       show('album'); byId('albumTitle').textContent=folder;
-      mountGrid('albumGrid',listAlbum(m,folder),openLightbox);
+      mountGrid('albumGrid',listAlbum(m,folder));
       return;
     }
 
     // HOME
     show('home');
-    var gridEl = mountHomeGrid('streamGrid', listHomepage());
-    uninstallHomeBottomToggle(gridEl);
-    installHomeBottomToggle(gridEl); // gallery fills blank space only at bottom
-    // hero image
+    uninstallHomeBottomToggle();
+
+    // Build mixed mp4/webp list, then mount and hook scroll
+    listHomepageMixed().then(function(files){
+      var gridEl = mountHomeGrid('streamGrid', files);
+      installHomeBottomToggle(gridEl);
+    });
   }
 
   function boot(){
