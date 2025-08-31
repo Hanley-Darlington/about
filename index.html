@@ -12,6 +12,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
+  <!-- Preload the hero image (no cache changes) -->
+  <link rel="preload" as="image" href="/profile/profile-star.webp" fetchpriority="high" />
+
   <!-- AOS (Animate On Scroll) -->
   <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet" />
 
@@ -34,7 +37,7 @@
     a{color:inherit;text-decoration:none}
     .container{width:min(1200px,92%);margin-inline:auto}
 
-    /* Hide AOS targets until first scroll (when AOS is initialized) */
+    /* Hide AOS targets until we actually enable animations */
     body:not(.aos-ready) [data-aos]{opacity:0}
 
     /* Header (clickable to Home) */
@@ -142,9 +145,18 @@
     <div class="container">
       <div class="hero">
         <div><h1>William Darlington</h1><p>Vires in Numeris</p><p>All Visuals are Authentic</p></div>
-        <div class="hero-card"><img id="heroImg" alt="Profile"></div>
+        <!-- load hero immediately -->
+        <div class="hero-card">
+          <img id="heroImg" src="/profile/profile-star.webp" alt="Profile" width="520" height="520" fetchpriority="high" loading="eager" decoding="async">
+        </div>
       </div>
-      <div class="gallery stream-grid" id="streamGrid"><p style="color:#9aa7bd">Loading photos…</p></div>
+
+      <div class="gallery stream-grid" id="streamGrid">
+        <p style="color:#9aa7bd">Loading photos…</p>
+      </div>
+
+      <!-- Sentinel: when this hits the viewport, enable AOS -->
+      <div id="home-bottom-sentinel" style="height:1px"></div>
     </div>
   </section>
 
@@ -202,7 +214,6 @@
   function isImg(n){return hasExt(n,IMG_EXT);} function isVideo(n){return hasExt(n,VIDEO_EXT);} function isMedia(n){return isImg(n)||isVideo(n);}
   function cacheGet(){return null;} function cacheSet(){}
 
-  // helper: basename (without extension) must end with a token
   function endsWithToken(path, token){
     var base = (path||'').split('/').pop().toLowerCase();
     var dot = base.lastIndexOf('.');
@@ -212,7 +223,6 @@
 
   function fetchJSON(url){return fetch(url,{headers:{'Accept':'application/vnd.github+json'}}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
 
-  // include ALL media in the manifest (no filtering here)
   function buildManifestFromTree(tree){
     var f=tree&&tree.tree?tree.tree:[];
     var m={portfolio:[],travels:{},profile:[]};
@@ -253,7 +263,7 @@
   function heroFromProfile(m){
     var pics=m.profile.filter(isImg);
     var starPic = pics.find(function(p){ return endsWithToken(p,'star'); });
-    return starPic ? rawURL(starPic) : (pics.length ? rawURL(pics[0]) : 'user.png');
+    return starPic ? rawURL(starPic) : (pics.length ? rawURL(pics[0]) : '/profile/profile-star.webp');
   }
 
   function byId(id){return document.getElementById(id);} function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
@@ -261,8 +271,8 @@
 
   // AOS mapping for the HOME grid (3 cols × 3 rows pattern)
   function homeAnim(index){
-    var row = Math.floor(index / 3);   // 0,1,2 -> top,middle,bottom
-    var col = index % 3;               // 0,1,2 -> left,middle,right
+    var row = Math.floor(index / 3);
+    var col = index % 3;
     if(row === 0){ return col === 0 ? 'zoom-in-left' : col === 1 ? 'zoom-in-down' : 'zoom-in-right'; }
     if(row === 1){ return col === 0 ? 'zoom-in-left' : col === 1 ? 'zoom-in'      : 'zoom-in-right'; }
     if(row === 2){ return col === 0 ? 'zoom-in-left' : col === 1 ? 'zoom-in-up'   : 'zoom-in-right'; }
@@ -340,7 +350,7 @@
       return;
     }
 
-    // HOME: show only *star items in the stream (mixed), fallback to all if none; cap to 12
+    // HOME: show only *star items; fallback to all; cap to 12
     show('home');
     var all=[].concat(listPortfolio(m),listTravelAll(m));
     var starredOnly = all.filter(function(f){ return endsWithToken(f.alt,'star'); });
@@ -351,33 +361,42 @@
     });
   }
 
-  // Initialize AOS on the FIRST user scroll only
-  function initAOSOnFirstScroll(){
-    var inited = false;
-    function go(){
-      if(inited) return;
-      inited = true;
-      document.body.classList.add('aos-ready');
-      if(window.AOS){
-        AOS.init({ once:true, duration:500, easing:'ease-out' });
-        if(AOS.refresh) AOS.refresh();
-      }
-      window.removeEventListener('scroll', go);
-      window.removeEventListener('wheel', go, {passive:true});
-      window.removeEventListener('touchmove', go, {passive:true});
-      window.removeEventListener('keydown', go);
+  // Enable AOS ONLY when the bottom of the home page is reached
+  function enableAOSOnce(){
+    if(document.body.classList.contains('aos-ready')) return;
+    document.body.classList.add('aos-ready');
+    if(window.AOS){
+      AOS.init({ once:true, duration:500, easing:'ease-out' });
+      if(AOS.refresh) AOS.refresh();
     }
-    window.addEventListener('scroll', go, {passive:true});
-    window.addEventListener('wheel', go, {passive:true});
-    window.addEventListener('touchmove', go, {passive:true}); // mobile
-    window.addEventListener('keydown', go); // PageDown/Spacebar
+  }
+
+  function initAOSOnHomeBottom(){
+    var sentinel = document.getElementById('home-bottom-sentinel');
+    if(!('IntersectionObserver' in window) || !sentinel){
+      // Fallback: if no IO, enable immediately at end of load
+      window.addEventListener('load', enableAOSOnce, { once:true });
+      return;
+    }
+    var seen=false;
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting && !seen){
+          seen=true;
+          io.disconnect();
+          enableAOSOnce();
+        }
+      });
+    }, { root:null, threshold:0.6 });
+    io.observe(sentinel);
   }
 
   function boot(){
     setupLightbox();
-    initAOSOnFirstScroll(); // <-- key change: wait for first scroll
+    initAOSOnHomeBottom(); // <-- only after bottom of home is reached
     loadManifest().then(function(m){
-      byId('heroImg').src=heroFromProfile(m);
+      // If a different profile-star exists in repo, this can replace the local src
+      document.getElementById('heroImg').src = heroFromProfile(m);
       routeWith(m);
       window.addEventListener('hashchange',()=>routeWith(m));
     });
