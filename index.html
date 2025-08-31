@@ -12,12 +12,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- AOS (used only on HOME) -->
-  <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet" />
-
-  <!-- Preload hero for faster LCP -->
-  <link rel="preload" as="image" href="/profile/profile-star.webp" fetchpriority="high" />
-
   <style>
     :root{
       --bg:#0b0e14; --muted:#94a3b8; --text:#e8eefc;
@@ -37,17 +31,18 @@
     a{color:inherit;text-decoration:none}
     .container{width:min(1200px,92%);margin-inline:auto}
 
-    /* Hide AOS targets only when disabled */
-    body:not(.aos-ready) [data-aos]{opacity:0}
-
-    /* Header (clickable to Home but doesn't block nav links) */
+    /* Header (clickable to Home) */
     header{
-      position:sticky; top:0; z-index:9999;
+      position:sticky;
+      top:0;
+      z-index:9999;
       background:rgba(15,21,36,.78);
       backdrop-filter:saturate(150%) blur(12px);
       border-bottom:1px solid rgba(255,255,255,.08);
-      cursor:pointer; isolation:isolate;
+      cursor:pointer;
+      isolation:isolate; /* prevent overlaps blocking it */
     }
+
     .nav{display:flex;justify-content:flex-end;align-items:center;padding:14px 28px;gap:12px}
     .nav-links{display:flex;gap:12px;flex-wrap:wrap}
     .chip{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)}
@@ -70,26 +65,27 @@
     .hero-card img{width:100%;height:auto;object-fit:cover}
 
     .hidden{display:none}
+    .view-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+    .view-head h2{font-size:clamp(24px,3vw,34px)}
+    .back{padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14)}
 
-    /* HOME grid: fixed columns so no gaps */
-    #streamGrid{
-      display:grid; gap:18px;
-      grid-template-columns: repeat(4, 1fr);
+    .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px}
+    .shot{border-radius:var(--radius);overflow:hidden;background:#111;box-shadow:var(--shadow);cursor:pointer}
+
+    #streamGrid .shot, #portfolioGrid .shot { aspect-ratio:16/9; }
+    #streamGrid .shot img, #streamGrid .shot video,
+    #portfolioGrid .shot img, #portfolioGrid .shot video{
+      width:100%;height:100%;object-fit:cover;background:#000;
     }
-    @media (max-width:1100px){ #streamGrid{ grid-template-columns: repeat(3, 1fr); } }
-    @media (max-width:800px){  #streamGrid{ grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width:520px){  #streamGrid{ grid-template-columns: 1fr; } }
-
-    #streamGrid .shot{
-      border-radius:var(--radius); overflow:hidden; background:#111;
-      box-shadow:var(--shadow); cursor:pointer; aspect-ratio:16/9;
+    #albumGrid { align-items: start; }
+    #albumGrid .shot { aspect-ratio:16/9; }
+    #albumGrid .shot img, #albumGrid .shot video{
+      width:100%;height:100%;object-fit:cover;background:#000;
     }
-    #streamGrid .shot img{width:100%;height:100%;object-fit:cover;background:#000; display:block}
 
-    /* Travel cards (NO AOS), hover kept */
     .travel-grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
     .place{position:relative;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);aspect-ratio:16/9;background:#000}
-    .place img{width:100%;height:100%;object-fit:cover;display:block;background:#000}
+    .place img,.place video{width:100%;height:100%;object-fit:cover;display:block;background:#000}
     .place .overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.65),rgba(0,0,0,.08) 60%);display:flex;flex-direction:column;justify-content:flex-end;padding:20px}
     .place h4{margin:0 0 6px;font-size:18px}
     .place p{margin:0 0 10px;font-size:14px;color:var(--muted)}
@@ -99,17 +95,15 @@
     .footer-center{display:flex;flex-direction:column;align-items:center;gap:10px}
     .social{display:flex;gap:10px}
 
-    /* Hover effects */
     @media (hover:hover) and (pointer:fine){
-      #streamGrid .shot, .place{transition: transform .18s ease, box-shadow .18s ease;will-change: transform;}
-      #streamGrid .shot:hover, .place:hover{transform: translateY(-4px) scale(1.02);box-shadow: 0 20px 50px rgba(0,0,0,.6);}
-      #streamGrid .shot:focus-visible{outline: 2px solid var(--brand);outline-offset: 2px;}
+      .shot{transition: transform .18s ease, box-shadow .18s ease;will-change: transform;}
+      .shot:hover{transform: translateY(-4px) scale(1.02);box-shadow: 0 20px 50px rgba(0,0,0,.6);}
+      .shot:focus-visible{outline: 2px solid var(--brand);outline-offset: 2px;}
     }
 
-    /* Lightbox (kept for future use) */
     .lightbox{position: fixed; inset: 0; z-index: 100;display: none; align-items: center; justify-content: center;background: rgba(0,0,0,.82); padding: 20px;}
     .lightbox.open{ display: flex; }
-    .lightbox img{max-width: min(1200px, 95vw);max-height: 90vh;border-radius: 16px;box-shadow: var(--shadow);background:#000;}
+    .lightbox img, .lightbox video{max-width: min(1200px, 95vw);max-height: 90vh;border-radius: 16px;box-shadow: var(--shadow);background:#000;}
     .lightbox .close{position: absolute; top: 14px; right: 14px;padding: 8px 12px; border-radius: 999px;background: rgba(255,255,255,.12);border: 1px solid rgba(255,255,255,.18);color: #fff; cursor: pointer;}
   </style>
 </head>
@@ -117,7 +111,6 @@
 <header>
   <div class="nav container">
     <nav class="nav-links">
-      <a class="chip" href="#/">Home</a>
       <a class="chip" href="#/portfolio">Portfolio</a>
       <a class="chip" href="#/travels">Travel</a>
       <a class="pill" href="https://hdbot.io" target="_blank" rel="noopener">ALGOs</a>
@@ -126,15 +119,15 @@
   </div>
 </header>
 
-<!-- Make the whole header go Home, without blocking the inner <a> links -->
 <script>
+  // Make header clickable for Home
   (function(){
-    var hdr=document.querySelector('header');
+    var hdr = document.querySelector('header');
     if(!hdr) return;
-    hdr.addEventListener('click',function(e){
-      if(e.target.closest('a')) return;  // let real links work
-      location.hash='#/';
-    }, true); // capture so clicks on empty header area still work
+    hdr.addEventListener('click', function(e){
+      if(e.target.closest('a')) return; // don’t block links
+      location.hash = '#/';
+    }, true);
   })();
 </script>
 
@@ -143,15 +136,9 @@
     <div class="container">
       <div class="hero">
         <div><h1>William Darlington</h1><p>Vires in Numeris</p><p>All Visuals are Authentic</p></div>
-        <div class="hero-card">
-          <img id="heroImg" src="/profile/profile-star.webp" alt="Profile" width="520" height="520" fetchpriority="high" loading="eager" decoding="async">
-        </div>
+        <div class="hero-card"><img id="heroImg" alt="Profile"></div>
       </div>
-
-      <!-- HOME GRID -->
-      <div id="streamGrid"></div>
-      <!-- When this touches the viewport, enable AOS; remove on scroll up -->
-      <div id="home-bottom-sentinel" style="height:1px"></div>
+      <div class="gallery stream-grid" id="streamGrid"><p style="color:#9aa7bd">Loading photos…</p></div>
     </div>
   </section>
 
@@ -193,140 +180,97 @@
   <button class="close" aria-label="Close">✕</button>
 </div>
 
-<!-- AOS for home -->
-<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
-
 <script>
-(()=>{ 'use strict';
-  const $ = (id)=>document.getElementById(id);
-  const isMobile = ()=> window.matchMedia('(max-width:700px)').matches;
+(function(){
+  'use strict';
 
-  /* ---------------- HOME fixed images (homepage/1.webp…12.webp) ----------- */
-  function homeAnim(i){
-    const n=i+1;
-    if(n===1) return 'zoom-in-right';
-    if(n===2||n===3) return 'zoom-in-down';
-    if(n===4) return 'zoom-in-left';
-    if(n===5) return 'zoom-in-right';
-    if(n===6||n===7) return 'zoom-in';
-    if(n===8) return 'zoom-in-left';
-    if(n===9) return 'zoom-in-right';
-    if(n===10||n===11) return 'zoom-in-up';
-    if(n===12) return 'zoom-in-left';
-    return 'zoom-in';
-  }
-  function mountHomepageGrid(){
-    const el=$('streamGrid'); el.innerHTML='';
-    const frag=document.createDocumentFragment();
-    for(let i=1;i<=12;i++){
-      const fig=document.createElement('figure'); fig.className='shot';
-      if(!isMobile()) fig.setAttribute('data-aos', homeAnim(i-1));
-      const img=new Image();
-      img.src='homepage/'+i+'.webp';   // RELATIVE path (no leading slash)
-      img.alt='Homepage '+i;
-      img.loading='lazy';
-      img.onerror=()=>{ fig.remove(); if(window.AOS && AOS.refresh) AOS.refresh(); };
-      fig.appendChild(img);
-      frag.appendChild(fig);
-    }
-    el.appendChild(frag);
-    if(window.AOS && AOS.refresh) AOS.refresh();
+  var GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
+  var IMG_EXT=['.jpg','.jpeg','.png','.webp','.gif','.avif'];
+  var VIDEO_EXT=['.mp4','.webm'];
+
+  function rawURL(path){ return 'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path)+'?v='+Date.now(); }
+  function hasExt(n,exts){n=(n||'').toLowerCase();for(var i=0;i<exts.length;i++){if(n.endsWith(exts[i]))return true;}return false;}
+  function isImg(n){return hasExt(n,IMG_EXT);} function isVideo(n){return hasExt(n,VIDEO_EXT);} function isMedia(n){return isImg(n)||isVideo(n);}
+  function cacheGet(){return null;} function cacheSet(){}
+
+  // helper: basename (without extension) must end with a token
+  function endsWithToken(path, token){
+    var base = (path||'').split('/').pop().toLowerCase();
+    var dot = base.lastIndexOf('.');
+    var name = dot >= 0 ? base.slice(0, dot) : base;
+    return name.endsWith(String(token).toLowerCase());
   }
 
-  /* ---------------- AOS toggle: on at bottom, off when scrolling up ------- */
-  let aosInit=false;
-  function ensureAOS(){
-    if(aosInit) return; aosInit=true;
-    if(window.AOS) AOS.init({ once:true, duration:500, easing:'ease-out' });
-  }
-  function initAOSToggle(){
-    const sentinel=$('home-bottom-sentinel');
-    if(!('IntersectionObserver' in window) || !sentinel) return;
-    const io=new IntersectionObserver((entries)=>{
-      for(const e of entries){
-        if(e.isIntersecting){
-          ensureAOS();
-          document.body.classList.add('aos-ready');
-          if(window.AOS && AOS.refresh) AOS.refresh();
-        }else{
-          document.body.classList.remove('aos-ready');
-        }
-      }
-    }, { threshold:0, rootMargin:'0px 0px -10% 0' });
-    io.observe(sentinel);
-  }
+  function fetchJSON(url){return fetch(url,{headers:{'Accept':'application/vnd.github+json'}}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
 
-  /* ---------------- Manifest-backed sections (travel/portfolio/album) ---- */
-  const GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
-  const IMG_EXT=['.jpg','.jpeg','.png','.webp','.gif','.avif'];
-  const VIDEO_EXT=['.mp4','.webm'];
-  const hasExt=(n,exts)=>{ n=(n||'').toLowerCase(); for(let i=0;i<exts.length;i++) if(n.endsWith(exts[i])) return true; return false; };
-  const isImg =(n)=>hasExt(n,IMG_EXT);
-  const isVideo=(n)=>hasExt(n,VIDEO_EXT);
-  const isMedia=(n)=>isImg(n)||isVideo(n);
-  const rawURL=(p)=>'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(p)+'?v='+Date.now();
-  const endsWithToken=(p,t)=>{ const b=(p||'').split('/').pop().toLowerCase(); const d=b.lastIndexOf('.'); const nm=d>=0?b.slice(0,d):b; return nm.endsWith(String(t).toLowerCase()); };
-  const fetchJSON=(u)=>fetch(u,{headers:{'Accept':'application/vnd.github+json'}}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});
-  const buildManifestFromTree=(tree)=>{
-    const f=tree && tree.tree ? tree.tree : []; const m={portfolio:[],travels:{},profile:[]};
-    for(let i=0;i<f.length;i++){
-      const it=f[i]; if(it.type!=='blob'||!isMedia(it.path)) continue;
+  // include ALL media in the manifest (no filtering here)
+  function buildManifestFromTree(tree){
+    var f=tree&&tree.tree?tree.tree:[];
+    var m={portfolio:[],travels:{},profile:[]};
+    for(var i=0;i<f.length;i++){
+      var it=f[i];
+      if(it.type!=='blob'||!isMedia(it.path)) continue;
       if(it.path.startsWith('portfolio/')) m.portfolio.push(it.path);
       else if(it.path.startsWith('travels/')){
-        const parts=it.path.split('/'); if(parts.length>=3){ const folder=decodeURIComponent(parts[1]); (m.travels[folder]||(m.travels[folder]=[])).push(it.path); }
-      } else if(it.path.startsWith('profile/')) m.profile.push(it.path);
-    } return m;
-  };
-  const loadManifest=()=>fetch('/manifest.json',{cache:'no-store'})
-    .then(r=>{if(r.ok)return r.json(); throw new Error('no manifest');})
-    .catch(()=>fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
-      .then(c=>fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+c.commit.tree.sha+'?recursive=1'))
-      .then(buildManifestFromTree));
-  const listPortfolio=(m)=>m.portfolio.map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));
-  const listTravelAll=(m)=>{ const out=[]; for(const f in m.travels){ m.travels[f].forEach(p=>out.push({src:rawURL(p),alt:p.split('/').pop(),folder:f,type:isVideo(p)?'video':'image'})); } return out; };
-  const listAlbum=(m,folder)=>(m.travels[folder]||[]).map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));
-  const heroFromProfile=(m)=>{ const pics=m.profile.filter(isImg); const star=pics.find(p=>endsWithToken(p,'star')); return star?rawURL(star):(pics.length?rawURL(pics[0]):'/profile/profile-star.webp'); };
-
-  function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
-  function makeVideo(src){ const v=document.createElement('video'); v.src=src; v.muted=true; v.loop=true; v.autoplay=true; v.playsInline=true; v.controls=false; return v; }
-
-  // NON-home grid (no AOS)
-  function mountGrid(id,files){
-    const el=$(id); clear(el);
-    if(!files.length){ const p=document.createElement('p'); p.textContent='Nothing yet.'; p.style.color='#9aa7bd'; el.appendChild(p); return; }
-    const frag=document.createDocumentFragment();
-    for(let i=0;i<files.length;i++){
-      const f=files[i];
-      const fig=document.createElement('figure'); fig.className='shot';
-      const node=f.type==='video'?makeVideo(f.src):Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'});
-      fig.appendChild(node); frag.appendChild(fig);
+        var parts=it.path.split('/');
+        if(parts.length>=3){
+          var folder=decodeURIComponent(parts[1]);
+          (m.travels[folder]||(m.travels[folder]=[])).push(it.path);
+        }
+      }else if(it.path.startsWith('profile/')) m.profile.push(it.path);
     }
-    el.appendChild(frag);
+    return m;
   }
 
-  const views={home:$('view-home'),portfolio:$('view-portfolio'),travels:$('view-travels'),album:$('view-album')};
-  function show(v){ Object.values(views).forEach(x=>x.classList.add('hidden')); views[v].classList.remove('hidden'); scrollTo(0,0); }
+  function loadManifest(){return fetch('/manifest.json',{cache:'no-store'}).then(r=>{if(r.ok)return r.json();throw new Error('no manifest');}).catch(()=>fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref)).then(c=>fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+c.commit.tree.sha+'?recursive=1')).then(buildManifestFromTree));}
+
+  function listPortfolio(m){return m.portfolio.map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));}
+  function listTravelAll(m){var out=[];for(var f in m.travels){m.travels[f].forEach(p=>out.push({src:rawURL(p),alt:p.split('/').pop(),folder:f,type:isVideo(p)?'video':'image'}));}return out;}
+  function listAlbum(m,folder){return (m.travels[folder]||[]).map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));}
+
+  // hero prefers profile image ending in *star, else falls back
+  function heroFromProfile(m){
+    var pics=m.profile.filter(isImg);
+    var starPic = pics.find(function(p){ return endsWithToken(p,'star'); });
+    return starPic ? rawURL(starPic) : (pics.length ? rawURL(pics[0]) : 'user.png');
+  }
+
+  function byId(id){return document.getElementById(id);} function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
+  function makeVideo(src){var v=document.createElement('video');v.src=src;v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.controls=false;return v;}
+
+  function mountGrid(id,files,onClick){var el=byId(id);clear(el);if(!files.length){var p=document.createElement('p');p.textContent='Nothing yet.';p.style.color='#9aa7bd';el.appendChild(p);return;}files.forEach(f=>{var fig=document.createElement('figure');fig.className='shot';var node=f.type==='video'?makeVideo(f.src):(Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'}));if(onClick)fig.addEventListener('click',()=>onClick(f));fig.appendChild(node);el.appendChild(fig);});}
+
+  // lightbox
+  var lightboxEl;function setupLightbox(){lightboxEl=byId('lightbox');lightboxEl.addEventListener('click',e=>{if(e.target===lightboxEl||e.target.classList.contains('close'))closeLightbox();});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox();});}
+  function openLightbox(f){lightboxEl.innerHTML='<button class="close">✕</button>';if(f.type==='video'){var v=makeVideo(f.src);v.controls=true;lightboxEl.appendChild(v);}else{var img=new Image();img.src=f.src;img.alt=f.alt;lightboxEl.appendChild(img);}lightboxEl.classList.add('open');}
+  function closeLightbox(){lightboxEl.classList.remove('open');}
+
+  var views={home:byId('view-home'),portfolio:byId('view-portfolio'),travels:byId('view-travels'),album:byId('view-album')};
+  function show(v){Object.values(views).forEach(x=>x.classList.add('hidden'));views[v].classList.remove('hidden');scrollTo(0,0);}
 
   function routeWith(m){
-    const h=(location.hash||'').slice(1);
+    var h=(location.hash||'').slice(1);
 
     if(h.startsWith('/portfolio')){
       show('portfolio');
-      mountGrid('portfolioGrid',listPortfolio(m));
+      // show ALL portfolio media
+      mountGrid('portfolioGrid',listPortfolio(m),openLightbox);
       return;
     }
 
     if(h.startsWith('/travels')){
       show('travels');
-      const grouped={};
-      listTravelAll(m).forEach(f=>(grouped[f.folder]||(grouped[f.folder]=[])).push(f));
-      const wrap=$('travelCards'); clear(wrap);
-      for(const folder in grouped){
-        const files=grouped[folder];
-        const cover = files.find(f=>endsWithToken(f.alt,'star')) || files[0];
-        const card=document.createElement('article'); card.className='place';
-        card.appendChild(cover.type==='video'?makeVideo(cover.src):Object.assign(new Image(),{src:cover.src,alt:folder,loading:'lazy'}));
-        const ov=document.createElement('div'); ov.className='overlay';
+      var g={};
+      listTravelAll(m).forEach(f=>(g[f.folder]||(g[f.folder]=[])).push(f));
+      var wrap=byId('travelCards');clear(wrap);
+      for(var folder in g){
+        var files=g[folder]; // ALL files in this folder
+        var card=document.createElement('article');card.className='place';
+        // prefer *chosenstar, else any *star, else first file
+        var chosen = files.find(function(f){ return endsWithToken(f.alt,'chosenstar'); });
+        var starred = chosen || files.find(function(f){ return endsWithToken(f.alt,'star'); }) || files[0];
+        card.appendChild(starred.type==='video'?makeVideo(starred.src):Object.assign(new Image(),{src:starred.src,alt:folder}));
+        var ov=document.createElement('div');ov.className='overlay';
         ov.innerHTML='<h4>'+folder+'</h4><p>'+files.length+' files</p><a class="chip" href="#/travel/'+encodeURIComponent(folder)+'">View</a>';
         card.appendChild(ov);
         wrap.appendChild(card);
@@ -335,30 +279,25 @@
     }
 
     if(h.startsWith('/travel/')){
-      const folder=decodeURIComponent(h.split('/')[2]||'');
-      show('album'); $('albumTitle').textContent=folder||'Album';
-      mountGrid('albumGrid',listAlbum(m,folder));
+      var folder=decodeURIComponent(h.split('/')[2]);
+      show('album');byId('albumTitle').textContent=folder;
+      // show ALL files within the folder
+      mountGrid('albumGrid',listAlbum(m,folder),openLightbox);
       return;
     }
 
-    // HOME
+    // HOME: show only *star items in the stream (mixed), fallback to all if none
     show('home');
-    mountHomepageGrid();
-  }
-
-  function boot(){
-    initAOSToggle();
-    loadManifest().then(m=>{
-      // set hero (prefer profile/*star if exists in repo)
-      $('heroImg').src = heroFromProfile(m);
-      routeWith(m); // initial render based on current hash
-      window.addEventListener('hashchange', ()=>routeWith(m));
-    }).catch(err=>{
-      console.error(err);
-      // even if manifest fails, still render HOME
-      routeWith({portfolio:[],travels:{},profile:[]});
+    var all=[...listPortfolio(m),...listTravelAll(m)];
+    var starredOnly = all.filter(function(f){ return endsWithToken(f.alt,'star'); });
+    var stream = (starredOnly.length ? starredOnly : all).slice(0,12);
+    mountGrid('streamGrid',stream, function(f){
+      if(f.folder) location.hash='#/travel/'+encodeURIComponent(f.folder);
+      else location.hash='#/portfolio';
     });
   }
+
+  function boot(){setupLightbox();loadManifest().then(m=>{byId('heroImg').src=heroFromProfile(m);routeWith(m);window.addEventListener('hashchange',()=>routeWith(m));});}
   boot();
 })();
 </script>
