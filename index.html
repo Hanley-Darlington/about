@@ -17,6 +17,7 @@
       --bg:#0b0e14; --muted:#94a3b8; --text:#e8eefc;
       --brand:#7c3aed; --brand-2:#22d3ee; --ring:rgba(124,58,237,.4);
       --shadow:0 14px 40px rgba(0,0,0,.5); --radius:20px;
+      --home-spacer: 400px; /* height of the blank area under the hero on desktop */
     }
     *{box-sizing:border-box;margin:0;padding:0}
     body{
@@ -39,10 +40,16 @@
       border-bottom:1px solid rgba(255,255,255,.08);
       cursor:pointer; isolation:isolate;
     }
+
+    /* Make the animation wrapper ignore pointer events so the tile gets the click */
+    .anim-wrap{ pointer-events: none; }
+    .anim-wrap .shot{ pointer-events: auto; }
+
     .nav{display:flex;justify-content:flex-end;align-items:center;padding:14px 28px;gap:12px}
     .nav-links{display:flex;gap:12px;flex-wrap:wrap}
     .chip{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)}
     .pill{padding:10px 16px;border-radius:14px;background:linear-gradient(135deg,var(--brand),var(--brand-2));font-weight:700;color:#0a0a0a;box-shadow:0 8px 24px var(--ring)}
+
     @media (max-width:560px){
       .nav{justify-content:center;padding:10px 14px}
       .nav-links{gap:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
@@ -66,12 +73,13 @@
 
     .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px}
     .shot{border-radius:var(--radius);overflow:hidden;background:#111;box-shadow:var(--shadow);cursor:pointer}
+
     #streamGrid .shot, #portfolioGrid .shot { aspect-ratio:16/9; }
     #streamGrid .shot img, #streamGrid .shot video,
     #portfolioGrid .shot img, #portfolioGrid .shot video{
       width:100%;height:100%;object-fit:cover;background:#000;
     }
-    #albumGrid { align-items:start; }
+    #albumGrid { align-items: start; }
     #albumGrid .shot { aspect-ratio:16/9; }
     #albumGrid .shot img, #albumGrid .shot video{
       width:100%;height:100%;object-fit:cover;background:#000;
@@ -89,20 +97,51 @@
     .footer-center{display:flex;flex-direction:column;align-items:center;gap:10px}
     .social{display:flex;gap:10px}
 
+    /* Hover (desktop) */
     @media (hover:hover) and (pointer:fine){
       .shot{transition: transform .18s ease, box-shadow .18s ease;will-change: transform;}
       .shot:hover{transform: translateY(-4px) scale(1.02);box-shadow: 0 20px 50px rgba(0,0,0,.6);}
       .shot:focus-visible{outline: 2px solid var(--brand);outline-offset: 2px;}
     }
 
-    /* animation wrappers must not eat clicks */
-    .anim-wrap{pointer-events:none}
-    .anim-wrap .shot{pointer-events:auto}
-
     .lightbox{position: fixed; inset: 0; z-index: 100;display: none; align-items: center; justify-content: center;background: rgba(0,0,0,.82); padding: 20px;}
     .lightbox.open{ display: flex; }
     .lightbox img, .lightbox video{max-width: min(1200px, 95vw);max-height: 90vh;border-radius: 16px;box-shadow: var(--shadow);background:#000;}
     .lightbox .close{position: absolute; top: 14px; right: 14px;padding: 8px 12px; border-radius: 999px;background: rgba(255,255,255,.12);border: 1px solid rgba(255,255,255,.18);color: #fff; cursor: pointer;}
+
+    /* ---------- Desktop-only blank space under hero ---------- */
+    .home-spacer{display:none;}
+    @media (hover:hover) and (pointer:fine){
+      .home-spacer{display:block;height:var(--home-spacer);}
+    }
+
+    /* Prevent first-paint flash of the home grid on desktop */
+    @media (hover:hover) and (pointer:fine){
+      #streamGrid{ display:none; }          /* hidden at first paint */
+      #streamGrid.is-on{ display:grid; }    /* JS enables this */
+    }
+
+    /* ---------- Lightweight AOS-like animations (slower) ---------- */
+    .anim-wrap{display:block;will-change:transform,opacity}
+    .anim-play.zoom-in        {animation:zin 1.2s ease-out both}
+    .anim-play.zoom-in-up     {animation:zinUp 1.2s ease-out both}
+    .anim-play.zoom-in-down   {animation:zinDown 1.2s ease-out both}
+    .anim-play.zoom-in-left   {animation:zinLeft 1.2s ease-out both}
+    .anim-play.zoom-in-right  {animation:zinRight 1.2s ease-out both}
+
+    @keyframes zin      {from{opacity:0;transform:scale(.92)}         to{opacity:1;transform:none}}
+    @keyframes zinUp    {from{opacity:0;transform:translateY(24px) scale(.92)}   to{opacity:1;transform:none}}
+    @keyframes zinDown  {from{opacity:0;transform:translateY(-24px) scale(.92)}  to{opacity:1;transform:none}}
+    @keyframes zinLeft  {from{opacity:0;transform:translateX(-24px) scale(.92)}  to{opacity:1;transform:none}}
+    @keyframes zinRight {from{opacity:0;transform:translateX(24px) scale(.92)}   to{opacity:1;transform:none}}
+
+    @media (prefers-reduced-motion: reduce){
+      .anim-play.zoom-in,
+      .anim-play.zoom-in-up,
+      .anim-play.zoom-in-down,
+      .anim-play.zoom-in-left,
+      .anim-play.zoom-in-right{animation:none}
+    }
   </style>
 </head>
 <body>
@@ -123,7 +162,7 @@
     var hdr = document.querySelector('header');
     if(!hdr) return;
     hdr.addEventListener('click', function(e){
-      if(e.target.closest('a')) return;
+      if(e.target.closest('a')) return; // don’t block links
       location.hash = '#/';
     }, true);
   })();
@@ -132,11 +171,15 @@
 <main>
   <section id="view-home">
     <div class="container">
-      <div class="hero">
+      <div class="hero" id="homeHero">
         <div><h1>William Darlington</h1><p>Vires in Numeris</p><p>All Visuals are Authentic</p></div>
-        <div class="hero-card"><img id="heroImg" alt="Profile" decoding="async" fetchpriority="high"></div>
+        <div class="hero-card"><img id="heroImg" alt="Profile"></div>
       </div>
-      <div class="gallery stream-grid" id="streamGrid"><p style="color:#9aa7bd">Loading photos…</p></div>
+
+      <!-- Blank area that will be filled by the gallery when you reach the bottom -->
+      <div class="home-spacer" id="homeSpacer" aria-hidden="true"></div>
+
+      <div class="gallery stream-grid" id="streamGrid"></div>
     </div>
   </section>
 
@@ -185,11 +228,11 @@
   var GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
   var IMG_EXT=['.jpg','.jpeg','.png','.webp','.gif','.avif'];
   var VIDEO_EXT=['.mp4','.webm'];
+  var isDesktop = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
 
   function rawURL(path){ return 'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path)+'?v='+Date.now(); }
   function hasExt(n,exts){n=(n||'').toLowerCase();for(var i=0;i<exts.length;i++){if(n.endsWith(exts[i]))return true;}return false;}
   function isImg(n){return hasExt(n,IMG_EXT);} function isVideo(n){return hasExt(n,VIDEO_EXT);} function isMedia(n){return isImg(n)||isVideo(n);}
-
   function endsWithToken(path, token){
     var base = (path||'').split('/').pop().toLowerCase();
     var dot = base.lastIndexOf('.');
@@ -198,7 +241,6 @@
   }
 
   function fetchJSON(url){return fetch(url,{headers:{'Accept':'application/vnd.github+json'}}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
-
   function buildManifestFromTree(tree){
     var f=tree&&tree.tree?tree.tree:[];
     var m={portfolio:[],travels:{},profile:[]};
@@ -216,7 +258,6 @@
     }
     return m;
   }
-
   function loadManifest(){
     return fetch('/manifest.json',{cache:'no-store'}).then(r=>{if(r.ok)return r.json();throw new Error('no manifest');})
       .catch(()=>fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
@@ -228,32 +269,33 @@
   function listTravelAll(m){var out=[];for(var f in m.travels){m.travels[f].forEach(p=>out.push({src:rawURL(p),alt:p.split('/').pop(),folder:f,type:isVideo(p)?'video':'image'}));}return out;}
   function listAlbum(m,folder){return (m.travels[folder]||[]).map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));}
 
-  // ---- HOMEPAGE (supports 1..12 as .mp4 OR .webp OR .jpg) ----
-  function checkExists(url, method){
-    return fetch(url, { method: method||'HEAD', cache:'no-store' })
-      .then(r=> r.ok ? true : (r.type==='opaque' ? true : false))
-      .catch(()=>false);
-  }
-  function chooseHomepageSlot(i){
-    var mp4 = '/homepage/'+i+'.mp4';
-    var webp = '/homepage/'+i+'.webp';
-    var jpg  = '/homepage/'+i+'.jpg';
-    // Try mp4 → webp → jpg
-    return checkExists(mp4).then(ok=>{
-      if(ok) return {src:mp4, alt:'home-'+i, type:'video'};
-      return checkExists(webp).then(ok2=>{
-        if(ok2) return {src:webp, alt:'home-'+i, type:'image'};
-        return checkExists(jpg).then(ok3=>{
-          if(ok3) return {src:jpg, alt:'home-'+i, type:'image'};
-          return null; // nothing in this slot
-        });
-      });
+  /* ------- HOMEPAGE SLOTS: prefer mp4, fallback to webp ------- */
+  function detectHomepageItem(i){
+    return new Promise(function(resolve){
+      var mp4 = '/homepage/'+i+'.mp4';
+      var webp = '/homepage/'+i+'.webp';
+
+      var v = document.createElement('video');
+      v.preload = 'metadata';
+      v.src = mp4;
+
+      function ok(){ resolve({type:'video', src:mp4, alt:'home-'+i}); cleanup(); }
+      function fail(){
+        var img = new Image();
+        img.src = webp;
+        img.onload  = function(){ resolve({type:'image', src:webp, alt:'home-'+i}); };
+        img.onerror = function(){ resolve({type:'image', src:webp, alt:'home-'+i}); }; // last resort
+        cleanup();
+      }
+      function cleanup(){ v.onloadeddata = v.onerror = null; v.removeAttribute('src'); v.load(); }
+
+      v.onloadeddata = ok;
+      v.onerror = fail;
     });
   }
   function listHomepageMixed(){
-    var tasks=[];
-    for(var i=1;i<=12;i++) tasks.push(chooseHomepageSlot(i));
-    return Promise.all(tasks).then(arr=>arr.filter(Boolean));
+    var tasks=[]; for(var i=1;i<=12;i++) tasks.push(detectHomepageItem(i));
+    return Promise.all(tasks);
   }
 
   // hero prefers profile image ending in *star, else fallback
@@ -265,10 +307,44 @@
 
   function byId(id){return document.getElementById(id);}
   function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
-  function makeVideo(src){
-    var v=document.createElement('video');
-    v.src=src; v.muted=true; v.loop=true; v.autoplay=true; v.playsInline=true; v.controls=false;
-    return v;
+  function makeVideo(src){var v=document.createElement('video');v.src=src;v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.controls=false;return v;}
+
+  // Non-home grids
+  function mountGrid(id,files,onClick){
+    var el=byId(id); clear(el);
+    if(!files.length){var p=document.createElement('p');p.textContent='Nothing yet.';p.style.color='#9aa7bd';el.appendChild(p);return;}
+    files.forEach(f=>{
+      var fig=document.createElement('figure');fig.className='shot';
+      var node=f.type==='video'?makeVideo(f.src):(Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'}));
+      if(onClick) fig.addEventListener('click',()=>onClick(f));
+      fig.appendChild(node); el.appendChild(fig);
+    });
+    return el;
+  }
+
+  // Home grid with animation wrapper (hover remains on .shot)
+  function mountHomeGrid(id,files){
+    var el=byId(id); clear(el);
+    var animOrder = [
+      'zoom-in-right','zoom-in-down','zoom-in-down','zoom-in-left',
+      'zoom-in-right','zoom-in','zoom-in','zoom-in-left',
+      'zoom-in-right','zoom-in-up','zoom-in-up','zoom-in-left'
+    ];
+    files.forEach(function(f,idx){
+      var wrap = document.createElement('div'); wrap.className='anim-wrap '+animOrder[idx];
+      var fig=document.createElement('figure'); fig.className='shot';
+      if(f.type==='video'){
+        var v=document.createElement('video');
+        v.src=f.src; v.muted=true; v.loop=true; v.autoplay=true; v.playsInline=true; v.controls=false;
+        fig.appendChild(v);
+      }else{
+        var img=Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'});
+        fig.appendChild(img);
+      }
+      fig.addEventListener('click', ()=>openLightbox(f));
+      wrap.appendChild(fig); el.appendChild(wrap);
+    });
+    return el;
   }
 
   // Lightbox
@@ -286,54 +362,80 @@
   }
   function closeLightbox(){lightboxEl.classList.remove('open');}
 
-  // ---- MOUNT HELPERS ----
-  function mountGrid(id,files,onClick){
-    var el=byId(id); clear(el);
-    if(!files.length){var p=document.createElement('p');p.textContent='Nothing yet.';p.style.color='#9aa7bd';el.appendChild(p);return;}
-    files.forEach(f=>{
-      var fig=document.createElement('figure');fig.className='shot';
-      var node=f.type==='video'?makeVideo(f.src):(Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy',decoding:'async'}));
-      if(onClick) fig.addEventListener('click',()=>onClick(f));
-      fig.appendChild(node); el.appendChild(fig);
-    });
-    return el;
-  }
-
-  // Home grid (adds wrapper but keeps clicks/hover on .shot)
-  function mountHomeGrid(id,files){
-    var el=byId(id); clear(el);
-    var animOrder = [
-      'zoom-in-right','zoom-in-down','zoom-in-down','zoom-in-left',
-      'zoom-in-right','zoom-in','zoom-in','zoom-in-left',
-      'zoom-in-right','zoom-in-up','zoom-in-up','zoom-in-left'
-    ];
-    files.forEach(function(f,idx){
-      var wrap = document.createElement('div'); wrap.className='anim-wrap '+animOrder[idx];
-      var fig=document.createElement('figure'); fig.className='shot';
-      var node = (f.type==='video') ? makeVideo(f.src)
-                : Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy',decoding:'async'});
-      fig.appendChild(node);
-      // open lightbox on click
-      fig.addEventListener('click', ()=>openLightbox(f));
-      wrap.appendChild(fig); el.appendChild(wrap);
-    });
-    return el;
-  }
-
-  // ---- ROUTER ----
   var views={home:byId('view-home'),portfolio:byId('view-portfolio'),travels:byId('view-travels'),album:byId('view-album')};
   function show(v){Object.values(views).forEach(x=>x.classList.add('hidden'));views[v].classList.remove('hidden');scrollTo(0,0);}
+
+  /* ---------- Desktop scroll-to-bottom toggle ---------- */
+  var homeScrollHandler=null, animEnabled=false;
+  var ROW_STAGGER = 250;  // ms between rows (slower)
+  var COL_STAGGER = 100;   // ms between cols (slower)
+
+  function atBottom(){
+    var doc = document.documentElement;
+    return (window.innerHeight + window.scrollY) >= (doc.scrollHeight - 120);
+  }
+
+  function enableHome(gridEl){
+    if(animEnabled) return;
+    var spacer = byId('homeSpacer');
+    if(spacer) spacer.style.display='none';
+    gridEl.classList.add('is-on'); // show via class (prevents first-paint flash)
+
+    gridEl.querySelectorAll('.anim-wrap').forEach(function(w,i){
+      w.classList.remove('anim-play'); void w.offsetWidth; // restart
+      w.style.animationDelay = (Math.floor(i/4)*ROW_STAGGER + (i%4)*COL_STAGGER)+'ms';
+      w.classList.add('anim-play');
+    });
+    animEnabled=true;
+  }
+
+  function disableHome(gridEl){
+    var spacer = byId('homeSpacer'); if(spacer) spacer.style.display='';
+    gridEl.classList.remove('is-on'); // hide immediately
+    if(!animEnabled) return;
+    gridEl.querySelectorAll('.anim-wrap').forEach(function(w){
+      w.classList.remove('anim-play');
+      w.style.animationDelay='';
+    });
+    animEnabled=false;
+  }
+
+  function installHomeBottomToggle(gridEl){
+    if(!isDesktop){ // mobile: show grid, no animations
+      byId('homeSpacer').style.display='none';
+      gridEl.classList.add('is-on');
+      return;
+    }
+    // start with blank space + hidden grid
+    disableHome(gridEl);
+    function onScroll(){
+      if(atBottom()) enableHome(gridEl);
+      else disableHome(gridEl);
+    }
+    homeScrollHandler = onScroll;
+    window.addEventListener('scroll', onScroll, {passive:true});
+    onScroll(); // initial state
+  }
+  function uninstallHomeBottomToggle(gridEl){
+    if(homeScrollHandler){ window.removeEventListener('scroll', homeScrollHandler); homeScrollHandler=null; }
+    var spacer = byId('homeSpacer'); if(spacer) spacer.style.display='none';
+    if(gridEl){ gridEl.classList.add('is-on'); gridEl.querySelectorAll('.anim-wrap').forEach(w=>w.classList.remove('anim-play')); }
+    animEnabled=false;
+  }
+  /* ---------------------------------------------------- */
 
   function routeWith(m){
     var h=(location.hash||'').slice(1);
 
     if(h.startsWith('/portfolio')){
+      uninstallHomeBottomToggle();
       show('portfolio');
       mountGrid('portfolioGrid',listPortfolio(m),openLightbox);
       return;
     }
 
     if(h.startsWith('/travels')){
+      uninstallHomeBottomToggle();
       show('travels');
       var g={};
       listTravelAll(m).forEach(f=>(g[f.folder]||(g[f.folder]=[])).push(f));
@@ -341,8 +443,7 @@
       for(var folder in g){
         var files=g[folder];
         var card=document.createElement('article');card.className='place';
-        var chosen = files.find(function(f){ return endsWithToken(f.alt,'chosenstar'); });
-        var starred = chosen || files.find(function(f){ return endsWithToken(f.alt,'star'); }) || files[0];
+        var starred = files[0];
         card.appendChild(starred.type==='video'?makeVideo(starred.src):Object.assign(new Image(),{src:starred.src,alt:folder}));
         var ov=document.createElement('div');ov.className='overlay';
         ov.innerHTML='<h4>'+folder+'</h4><p>'+files.length+' files</p><a class="chip" href="#/travel/'+encodeURIComponent(folder)+'">View</a>';
@@ -353,36 +454,32 @@
     }
 
     if(h.startsWith('/travel/')){
+      uninstallHomeBottomToggle();
       var folder=decodeURIComponent(h.split('/')[2]);
       show('album'); byId('albumTitle').textContent=folder;
-      mountGrid('albumGrid',listAlbum(m,folder),openLightbox);
+      mountGrid('albumGrid',listAlbum(m,folder));
       return;
     }
 
-    // HOME: strictly homepage folder (mixed media). If a slot is missing we just skip it.
+    // HOME
     show('home');
+    uninstallHomeBottomToggle();
+
+    // Build mixed mp4/webp list, then mount and hook scroll
     listHomepageMixed().then(function(files){
-      if(files.length===0){
-        // fallback: show starred/all like before
-        var all=[...listPortfolio(m),...listTravelAll(m)];
-        var starredOnly = all.filter(function(f){ return endsWithToken(f.alt,'star'); });
-        var stream = (starredOnly.length ? starredOnly : all).slice(0,12);
-        mountGrid('streamGrid',stream, openLightbox);
-      }else{
-        mountHomeGrid('streamGrid', files);
-      }
+      var gridEl = mountHomeGrid('streamGrid', files);
+      installHomeBottomToggle(gridEl);
     });
   }
 
   function boot(){
     // lightbox
     (function setupLightbox(){
-      var lb=document.getElementById('lightbox');
-      lb.addEventListener('click',e=>{ if(e.target===lb||e.target.classList.contains('close')) lb.classList.remove('open'); });
-      document.addEventListener('keydown',e=>{ if(e.key==='Escape') lb.classList.remove('open'); });
+      var lightboxEl=document.getElementById('lightbox');
+      lightboxEl.addEventListener('click',e=>{ if(e.target===lightboxEl||e.target.classList.contains('close')) lightboxEl.classList.remove('open'); });
+      document.addEventListener('keydown',e=>{ if(e.key==='Escape') lightboxEl.classList.remove('open'); });
     })();
 
-    // load & route
     loadManifest().then(m=>{
       document.getElementById('heroImg').src=heroFromProfile(m);
       routeWith(m);
