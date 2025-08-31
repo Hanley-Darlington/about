@@ -323,72 +323,77 @@
 
   var views={home:byId('view-home'),portfolio:byId('view-portfolio'),travels:byId('view-travels'),album:byId('view-album')};
   function show(v){Object.values(views).forEach(x=>x.classList.add('hidden'));views[v].classList.remove('hidden');scrollTo(0,0);}
-
-  /* ---------- Desktop scroll-to-bottom toggle ---------- */
+  
+  /* ---------- Desktop scroll-to-bottom toggle WITH HYSTERESIS ---------- */
   var homeScrollHandler=null, animEnabled=false;
 
-  function atBottom(){
-    var doc = document.documentElement;
-    return (window.innerHeight + window.scrollY) >= (doc.scrollHeight - 100);
+  // tweak these to taste
+  const SHOW_THRESHOLD = 140;   // px from bottom to trigger showing
+  const HIDE_THRESHOLD = 900;   // px from bottom to trigger hiding (must be > SHOW_THRESHOLD)
+
+  function distFromBottom(){
+    const doc = document.documentElement;
+    return doc.scrollHeight - (window.innerHeight + (window.scrollY || doc.scrollTop || 0));
   }
 
   function enableHome(gridEl){
     if(animEnabled) return;
-    // Fill the blank space: hide spacer, show grid
-    var spacer = byId('homeSpacer');
+    const spacer = document.getElementById('homeSpacer');
     if(spacer) spacer.style.display='none';
     gridEl.style.display='grid';
-    // Start animations (wrappers)
     gridEl.querySelectorAll('.anim-wrap').forEach(function(w,i){
-      w.classList.remove('anim-play'); void w.offsetWidth; // restart
+      w.classList.remove('anim-play'); void w.offsetWidth;
       w.style.animationDelay = (Math.floor(i/4)*60 + (i%4)*30)+'ms';
       w.classList.add('anim-play');
     });
-    animEnabled=true;
+    animEnabled = true;
   }
 
   function disableHome(gridEl){
-    if(!animEnabled) {
-      // keep spacer visible, grid hidden (cold state)
-      var spacer = byId('homeSpacer'); if(spacer) spacer.style.display='';
-      gridEl.style.display='none';
-      return;
-    }
-    // Put the blank space back and hide grid again
-    var spacer2 = byId('homeSpacer'); if(spacer2) spacer2.style.display='';
+    const spacer = document.getElementById('homeSpacer');
+    if(spacer) spacer.style.display='';
     gridEl.style.display='none';
-    // stop animations
     gridEl.querySelectorAll('.anim-wrap').forEach(function(w){
-      w.classList.remove('anim-play');
-      w.style.animationDelay='';
+      w.classList.remove('anim-play'); w.style.animationDelay='';
     });
-    animEnabled=false;
+    animEnabled = false;
   }
 
   function installHomeBottomToggle(gridEl){
-    if(!isDesktop){ // mobile: just show grid normally, no animations
-      byId('homeSpacer').style.display='none';
+    if(!isDesktop){
+      document.getElementById('homeSpacer').style.display='none';
       gridEl.style.display='grid';
       return;
     }
-    // start with blank space + hidden grid
+    // start hidden with spacer
     disableHome(gridEl);
+
+    let ticking = false;
     function onScroll(){
-      if(atBottom()) enableHome(gridEl);
-      else disableHome(gridEl);
+      if(ticking) return;
+      ticking = true;
+      requestAnimationFrame(function(){
+        const d = distFromBottom();
+        if(!animEnabled && d <= SHOW_THRESHOLD){
+          enableHome(gridEl);
+        }else if(animEnabled && d >= HIDE_THRESHOLD){
+          disableHome(gridEl);
+        }
+        ticking = false;
+      });
     }
     homeScrollHandler = onScroll;
     window.addEventListener('scroll', onScroll, {passive:true});
     onScroll(); // set initial state
   }
+
   function uninstallHomeBottomToggle(gridEl){
     if(homeScrollHandler){ window.removeEventListener('scroll', homeScrollHandler); homeScrollHandler=null; }
-    // clean state
-    var spacer = byId('homeSpacer'); if(spacer) spacer.style.display='none';
+    const spacer = document.getElementById('homeSpacer'); if(spacer) spacer.style.display='none';
     if(gridEl){ gridEl.style.display='grid'; gridEl.querySelectorAll('.anim-wrap').forEach(w=>w.classList.remove('anim-play')); }
     animEnabled=false;
   }
-  /* ---------------------------------------------------- */
+  /* -------------------------------------------------------------------- */
 
   function routeWith(m){
     var h=(location.hash||'').slice(1);
