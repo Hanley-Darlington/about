@@ -139,6 +139,20 @@
       .anim-play.zoom-in-left,
       .anim-play.zoom-in-right{animation:none}
     }
+
+    /* -------- Safari <15 aspect-ratio fallback -------- */
+    @supports not (aspect-ratio: 1 / 1) {
+      #streamGrid .shot, #portfolioGrid .shot, #albumGrid .shot, .place { position: relative; }
+      #streamGrid .shot::before, #portfolioGrid .shot::before, #albumGrid .shot::before, .place::before {
+        content: ""; display: block; padding-top: 56.25%; /* 16:9 */
+      }
+      #streamGrid .shot > img, #streamGrid .shot > video,
+      #portfolioGrid .shot > img, #portfolioGrid .shot > video,
+      #albumGrid .shot > img, #albumGrid .shot > video,
+      .place > img, .place > video {
+        position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+      }
+    }
   </style>
 </head>
 <body>
@@ -276,23 +290,23 @@
       v.preload = 'metadata';
       v.src = mp4;
 
-      function ok(){ resolve({type:'video', src:mp4, alt:'home-'+i}); cleanup(); }
-      function fail(){
+      function ok(){ cleanup(); resolve({type:'video', src:mp4, alt:'home-'+i}); }
+      function tryWebp(){
         var img = new Image();
-        img.src = webp;
         img.onload  = function(){ resolve({type:'image', src:webp, alt:'home-'+i}); };
-        img.onerror = function(){ resolve({type:'image', src:webp, alt:'home-'+i}); };
+        img.onerror = function(){ resolve(null); }; // skip tile if neither works
+        img.src = webp;
         cleanup();
       }
-      function cleanup(){ v.onloadeddata = v.onerror = null; v.removeAttribute('src'); v.load(); }
+      function cleanup(){ v.onloadeddata = v.onerror = null; v.removeAttribute('src'); try{ v.load(); }catch(e){} }
 
       v.onloadeddata = ok;
-      v.onerror = fail;
+      v.onerror = tryWebp;
     });
   }
   function listHomepageMixed(){
     var tasks=[]; for(var i=1;i<=12;i++) tasks.push(detectHomepageItem(i));
-    return Promise.all(tasks);
+    return Promise.all(tasks).then(function(list){ return list.filter(Boolean); });
   }
 
   // hero prefers profile image ending in *star, else fallback
@@ -304,7 +318,14 @@
 
   function byId(id){return document.getElementById(id);}
   function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
-  function makeVideo(src){var v=document.createElement('video');v.src=src;v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.controls=false;return v;}
+  function makeVideo(src){
+    var v=document.createElement('video');
+    v.src=src;
+    v.muted=true; v.setAttribute('muted','');
+    v.playsInline=true; v.setAttribute('playsinline','');
+    v.loop=true; v.autoplay=true; v.controls=false;
+    return v;
+  }
 
   // Non-home grids
   function mountGrid(id,files,onClick){
@@ -336,8 +357,7 @@
       fig.dataset.alt  = f.alt || '';
 
       if(f.type==='video'){
-        var v=document.createElement('video');
-        v.src=f.src; v.muted=true; v.loop=true; v.autoplay=true; v.playsInline=true; v.controls=false;
+        var v = makeVideo(f.src);
         fig.appendChild(v);
       }else{
         var img=Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'});
