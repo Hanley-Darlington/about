@@ -40,7 +40,7 @@
       backdrop-filter:saturate(150%) blur(12px);
       border-bottom:1px solid rgba(255,255,255,.08);
       cursor:pointer;
-      isolation:isolate; /* prevent overlaps blocking it */
+      isolation:isolate;
     }
 
     .nav{display:flex;justify-content:flex-end;align-items:center;padding:14px 28px;gap:12px}
@@ -188,7 +188,7 @@
   var IMG_EXT=['.jpg','.jpeg','.png','.webp','.gif','.avif'];
   var VIDEO_EXT=['.mp4','.webm'];
 
-  // REMOVE cache-buster so the browser can cache
+  // cache-friendly raw URL (no ?v= timestamp)
   function rawURL(path){
     return 'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path);
   }
@@ -196,7 +196,7 @@
   function isImg(n){return hasExt(n,IMG_EXT);} function isVideo(n){return hasExt(n,VIDEO_EXT);} function isMedia(n){return isImg(n)||isVideo(n);}
   function cacheGet(){return null;} function cacheSet(){}
 
-  // helper: basename (without extension) must end with a token
+  // endsWith token (checks base filename without extension)
   function endsWithToken(path, token){
     var base = (path||'').split('/').pop().toLowerCase();
     var dot = base.lastIndexOf('.');
@@ -206,7 +206,7 @@
 
   function fetchJSON(url){return fetch(url,{headers:{'Accept':'application/vnd.github+json'}}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
 
-  // Track ALL paths so we can detect -thumb variants
+  // Build manifest, track all paths so we can detect -thumb variants
   function buildManifestFromTree(tree){
     var f=tree&&tree.tree?tree.tree:[];
     var m={portfolio:[],travels:{},profile:[],all:new Set()};
@@ -247,14 +247,15 @@
   }
   function listAlbum(m,folder){return (m.travels[folder]||[]).map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));}
 
-  // choose hero profile: prefer *star
+  // hero prefers profile image ending in *star
   function heroFromProfile(m){
     var pics=m.profile.filter(isImg);
     var starPic = pics.find(function(p){ return endsWithToken(p,'star'); });
     return starPic ? rawURL(starPic) : (pics.length ? rawURL(pics[0]) : 'user.png');
   }
 
-  function byId(id){return document.getElementById(id);} function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
+  function byId(id){return document.getElementById(id);}
+  function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
   function makeVideo(src){var v=document.createElement('video');v.src=src;v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.controls=false;return v;}
 
   function mountGrid(id,files,onClick){
@@ -292,7 +293,7 @@
   var views={home:byId('view-home'),portfolio:byId('view-portfolio'),travels:byId('view-travels'),album:byId('view-album')};
   function show(v){Object.values(views).forEach(function(x){x.classList.add('hidden');});views[v].classList.remove('hidden');scrollTo(0,0);}
 
-  // --- Thumbnail helpers ---
+  // --- Thumbnail + order helpers ---
   function withThumb(path, manifest){
     var dot = path.lastIndexOf('.');
     if (dot < 0) return path;
@@ -304,6 +305,12 @@
     var needle = '/' + GH.ref + '/';
     var i = raw.indexOf(needle);
     return i >= 0 ? decodeURI(raw.slice(i + needle.length)) : raw;
+  }
+  // Extract order value from filename:
+  // supports "foo-home01-star.webp" OR "01-foo-star.webp"
+  function orderValueFromAlt(alt){
+    var m = alt.match(/-home(\d{1,3})(?:[-_.]|-?star)/i) || alt.match(/^(\d{1,3})[._-]/);
+    return m ? parseInt(m[1], 10) : Number.POSITIVE_INFINITY;
   }
 
   function routeWith(m){
@@ -322,13 +329,18 @@
       var wrap=byId('travelCards');clear(wrap);
       for(var folder in g){
         var files=g[folder];
-        var card=document.createElement('article');card.className='place';
         var chosen = files.find(function(f){ return endsWithToken(f.alt,'chosenstar'); });
         var starred = chosen || files.find(function(f){ return endsWithToken(f.alt,'star'); }) || files[0];
+
+        // (optional) if you want banners to prefer thumbs too, swap here with withThumb()
+        var bannerSrc = starred.src;
         var node = (starred.type==='video')
-          ? makeVideo(starred.src)
-          : Object.assign(new Image(),{src:starred.src,alt:folder,loading:'lazy',decoding:'async'});
+          ? makeVideo(bannerSrc)
+          : Object.assign(new Image(),{src:bannerSrc,alt:folder,loading:'lazy',decoding:'async'});
+
+        var card=document.createElement('article');card.className='place';
         card.appendChild(node);
+
         var ov=document.createElement('div');ov.className='overlay';
         ov.innerHTML='<h4>'+folder+'</h4><p>'+files.length+' files</p><a class="chip" href="#/travel/'+encodeURIComponent(folder)+'">View</a>';
         card.appendChild(ov);
@@ -344,15 +356,24 @@
       return;
     }
 
-    // HOME: prefer *star; then swap each to -thumb if it exists
+    // HOME: prefer *star; order by token; take first 12; swap to -thumb when present
     show('home');
     var all=[].concat(listPortfolio(m),listTravelAll(m));
     var starredOnly = all.filter(function(f){ return endsWithToken(f.alt,'star'); });
-    var stream = (starredOnly.length ? starredOnly : all).slice(0,12);
+    var pool = starredOnly.length ? starredOnly : all;
 
-    // Swap to -thumb when present
+    pool.sort(function(a, b){
+      var oa = orderValueFromAlt(a.alt);
+      var ob = orderValueFromAlt(b.alt);
+      if (oa === ob) return a.alt.localeCompare(b.alt);
+      return oa - ob;
+    });
+
+    var stream = pool.slice(0,12);
+
+    // Swap to -thumb when present (images only)
     stream = stream.map(function(f){
-      if (f.type === 'video') return f; // thumbs are for images only
+      if (f.type === 'video') return f;
       var repoPath = toRepoPath(f.src);
       var chosen = withThumb(repoPath, m);
       return Object.assign({}, f, { src: rawURL(chosen) });
@@ -381,3 +402,4 @@
 </script>
 </body>
 </html>
+
