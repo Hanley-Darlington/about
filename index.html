@@ -11,6 +11,8 @@
 
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <!-- AOS -->
+  <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet" />
 
   <style>
     :root{
@@ -40,7 +42,7 @@
       backdrop-filter:saturate(150%) blur(12px);
       border-bottom:1px solid rgba(255,255,255,.08);
       cursor:pointer;
-      isolation:isolate; /* prevent overlaps blocking it */
+      isolation:isolate;
     }
 
     .nav{display:flex;justify-content:flex-end;align-items:center;padding:14px 28px;gap:12px}
@@ -95,6 +97,7 @@
     .footer-center{display:flex;flex-direction:column;align-items:center;gap:10px}
     .social{display:flex;gap:10px}
 
+    /* Keep hover on homepage (and desktop) */
     @media (hover:hover) and (pointer:fine){
       .shot{transition: transform .18s ease, box-shadow .18s ease;will-change: transform;}
       .shot:hover{transform: translateY(-4px) scale(1.02);box-shadow: 0 20px 50px rgba(0,0,0,.6);}
@@ -134,7 +137,7 @@
 <main>
   <section id="view-home">
     <div class="container">
-      <div class="hero">
+      <div class="hero" id="homeHero">
         <div><h1>William Darlington</h1><p>Vires in Numeris</p><p>All Visuals are Authentic</p></div>
         <div class="hero-card"><img id="heroImg" alt="Profile"></div>
       </div>
@@ -180,6 +183,9 @@
   <button class="close" aria-label="Close">✕</button>
 </div>
 
+<!-- AOS -->
+<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+
 <script>
 (function(){
   'use strict';
@@ -187,13 +193,13 @@
   var GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
   var IMG_EXT=['.jpg','.jpeg','.png','.webp','.gif','.avif'];
   var VIDEO_EXT=['.mp4','.webm'];
+  var isDesktop = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
 
   function rawURL(path){ return 'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path)+'?v='+Date.now(); }
   function hasExt(n,exts){n=(n||'').toLowerCase();for(var i=0;i<exts.length;i++){if(n.endsWith(exts[i]))return true;}return false;}
   function isImg(n){return hasExt(n,IMG_EXT);} function isVideo(n){return hasExt(n,VIDEO_EXT);} function isMedia(n){return isImg(n)||isVideo(n);}
   function cacheGet(){return null;} function cacheSet(){}
 
-  // helper: basename (without extension) must end with a token
   function endsWithToken(path, token){
     var base = (path||'').split('/').pop().toLowerCase();
     var dot = base.lastIndexOf('.');
@@ -203,7 +209,6 @@
 
   function fetchJSON(url){return fetch(url,{headers:{'Accept':'application/vnd.github+json'}}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
 
-  // include ALL media in the manifest (no filtering here)
   function buildManifestFromTree(tree){
     var f=tree&&tree.tree?tree.tree:[];
     var m={portfolio:[],travels:{},profile:[]};
@@ -228,6 +233,15 @@
   function listTravelAll(m){var out=[];for(var f in m.travels){m.travels[f].forEach(p=>out.push({src:rawURL(p),alt:p.split('/').pop(),folder:f,type:isVideo(p)?'video':'image'}));}return out;}
   function listAlbum(m,folder){return (m.travels[folder]||[]).map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));}
 
+  // NEW: homepage list strictly from /homepage/1..12.webp
+  function listHomepage(){
+    var arr=[];
+    for(var i=1;i<=12;i++){
+      arr.push({src:'/homepage/'+i+'.webp',alt:'home-'+i,type:'image'});
+    }
+    return arr;
+  }
+
   // hero prefers profile image ending in *star, else falls back
   function heroFromProfile(m){
     var pics=m.profile.filter(isImg);
@@ -238,7 +252,7 @@
   function byId(id){return document.getElementById(id);} function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
   function makeVideo(src){var v=document.createElement('video');v.src=src;v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.controls=false;return v;}
 
-  function mountGrid(id,files,onClick){var el=byId(id);clear(el);if(!files.length){var p=document.createElement('p');p.textContent='Nothing yet.';p.style.color='#9aa7bd';el.appendChild(p);return;}files.forEach(f=>{var fig=document.createElement('figure');fig.className='shot';var node=f.type==='video'?makeVideo(f.src):(Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'}));if(onClick)fig.addEventListener('click',()=>onClick(f));fig.appendChild(node);el.appendChild(fig);});}
+  function mountGrid(id,files,onClick){var el=byId(id);clear(el);if(!files.length){var p=document.createElement('p');p.textContent='Nothing yet.';p.style.color='#9aa7bd';el.appendChild(p);return;}files.forEach(f=>{var fig=document.createElement('figure');fig.className='shot';var node=f.type==='video'?makeVideo(f.src):(Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'}));if(onClick)fig.addEventListener('click',()=>onClick(f));fig.appendChild(node);el.appendChild(fig);});return el;}
 
   // lightbox
   var lightboxEl;function setupLightbox(){lightboxEl=byId('lightbox');lightboxEl.addEventListener('click',e=>{if(e.target===lightboxEl||e.target.classList.contains('close'))closeLightbox();});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox();});}
@@ -248,25 +262,82 @@
   var views={home:byId('view-home'),portfolio:byId('view-portfolio'),travels:byId('view-travels'),album:byId('view-album')};
   function show(v){Object.values(views).forEach(x=>x.classList.add('hidden'));views[v].classList.remove('hidden');scrollTo(0,0);}
 
+  // --- AOS control (desktop homepage only, appears after scrolling past hero, removed when back up) ---
+  var homeScrollHandler = null;
+  function mapHomeAOS(gridEl){
+    if(!isDesktop || !window.AOS) return; // desktop only
+    var anim = [
+      'zoom-in-right','zoom-in-down','zoom-in-down','zoom-in-left',
+      'zoom-in-right','zoom-in','zoom-in','zoom-in-left',
+      'zoom-in-right','zoom-in-up','zoom-in-up','zoom-in-left'
+    ];
+    var shots = Array.prototype.slice.call(gridEl.querySelectorAll('.shot'));
+    shots.forEach(function(fig, i){
+      fig.removeAttribute('data-aos'); // clear first
+      if(anim[i]) fig.setAttribute('data-aos', anim[i]);
+    });
+  }
+  function clearAOSIn(el){
+    if(!window.AOS) return;
+    el.querySelectorAll('[data-aos]').forEach(function(n){ n.removeAttribute('data-aos'); });
+    AOS.refreshHard(); // purge
+  }
+  function enableHomeAOS(gridEl){
+    mapHomeAOS(gridEl);
+    AOS.init({ once:false, duration:600, easing:'ease-out-cubic', offset:80 });
+    AOS.refresh();
+  }
+  function disableHomeAOS(gridEl){
+    clearAOSIn(gridEl);
+  }
+  function installHomeScrollToggle(gridEl){
+    if(!isDesktop || !window.AOS) return;
+    var hero = document.getElementById('homeHero');
+    var threshold = hero.offsetTop + hero.offsetHeight - 60;
+    var enabled = false;
+
+    function onScroll(){
+      var y = window.scrollY || document.documentElement.scrollTop || 0;
+      if(!enabled && y >= threshold){
+        enableHomeAOS(gridEl); enabled = true;
+      }else if(enabled && y < threshold){
+        disableHomeAOS(gridEl); enabled = false;
+      }
+    }
+    onScroll(); // set initial state
+    window.addEventListener('scroll', onScroll, { passive:true });
+    homeScrollHandler = onScroll;
+  }
+  function uninstallHomeScrollToggle(){
+    if(homeScrollHandler){
+      window.removeEventListener('scroll', homeScrollHandler);
+      homeScrollHandler = null;
+    }
+  }
+  // --------------------------------------------------------------------
+
   function routeWith(m){
     var h=(location.hash||'').slice(1);
 
     if(h.startsWith('/portfolio')){
+      uninstallHomeScrollToggle();
+      // ensure no AOS on other pages
+      disableHomeAOS(document);
       show('portfolio');
-      // show ALL portfolio media
       mountGrid('portfolioGrid',listPortfolio(m),openLightbox);
       return;
     }
 
     if(h.startsWith('/travels')){
+      uninstallHomeScrollToggle();
+      disableHomeAOS(document);
       show('travels');
       var g={};
       listTravelAll(m).forEach(f=>(g[f.folder]||(g[f.folder]=[])).push(f));
       var wrap=byId('travelCards');clear(wrap);
       for(var folder in g){
-        var files=g[folder]; // ALL files in this folder
+        var files=g[folder];
         var card=document.createElement('article');card.className='place';
-        // prefer *chosenstar, else any *star, else first file
         var chosen = files.find(function(f){ return endsWithToken(f.alt,'chosenstar'); });
         var starred = chosen || files.find(function(f){ return endsWithToken(f.alt,'star'); }) || files[0];
         card.appendChild(starred.type==='video'?makeVideo(starred.src):Object.assign(new Image(),{src:starred.src,alt:folder}));
@@ -279,25 +350,31 @@
     }
 
     if(h.startsWith('/travel/')){
+      uninstallHomeScrollToggle();
+      disableHomeAOS(document);
       var folder=decodeURIComponent(h.split('/')[2]);
       show('album');byId('albumTitle').textContent=folder;
-      // show ALL files within the folder
       mountGrid('albumGrid',listAlbum(m,folder),openLightbox);
       return;
     }
 
-    // HOME: show only *star items in the stream (mixed), fallback to all if none
+    // HOME: strictly 12 images from /homepage/
     show('home');
-    var all=[...listPortfolio(m),...listTravelAll(m)];
-    var starredOnly = all.filter(function(f){ return endsWithToken(f.alt,'star'); });
-    var stream = (starredOnly.length ? starredOnly : all).slice(0,12);
-    mountGrid('streamGrid',stream, function(f){
-      if(f.folder) location.hash='#/travel/'+encodeURIComponent(f.folder);
-      else location.hash='#/portfolio';
-    });
+    var gridEl = mountGrid('streamGrid', listHomepage(), function(){ /* no click-through for homepage tiles */ });
+    // AOS: install scroll toggle so animations appear near bottom, disappear when back up
+    uninstallHomeScrollToggle();
+    disableHomeAOS(gridEl); // start clean
+    installHomeScrollToggle(gridEl);
   }
 
-  function boot(){setupLightbox();loadManifest().then(m=>{byId('heroImg').src=heroFromProfile(m);routeWith(m);window.addEventListener('hashchange',()=>routeWith(m));});}
+  function boot(){
+    setupLightbox();
+    loadManifest().then(m=>{
+      document.getElementById('heroImg').src=heroFromProfile(m);
+      routeWith(m);
+      window.addEventListener('hashchange',()=>routeWith(m));
+    });
+  }
   boot();
 })();
 </script>
