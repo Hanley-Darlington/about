@@ -135,7 +135,7 @@
   <section id="view-home">
     <div class="container">
       <div class="hero">
-        <div><h1>William Darlington</h1><p>Vires in Numeris</p><p>All visuals are authentic</p></div>
+        <div><h1>William Darlington</h1><p>Vires in Numeris</p><p>All Visuals are Authentic</p></div>
         <div class="hero-card"><img id="heroImg" alt="Profile"></div>
       </div>
       <div class="gallery stream-grid" id="streamGrid"><p style="color:#9aa7bd">Loading photos…</p></div>
@@ -188,7 +188,10 @@
   var IMG_EXT=['.jpg','.jpeg','.png','.webp','.gif','.avif'];
   var VIDEO_EXT=['.mp4','.webm'];
 
-  function rawURL(path){ return 'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path)+'?v='+Date.now(); }
+  // REMOVE cache-buster so the browser can cache
+  function rawURL(path){
+    return 'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path);
+  }
   function hasExt(n,exts){n=(n||'').toLowerCase();for(var i=0;i<exts.length;i++){if(n.endsWith(exts[i]))return true;}return false;}
   function isImg(n){return hasExt(n,IMG_EXT);} function isVideo(n){return hasExt(n,VIDEO_EXT);} function isMedia(n){return isImg(n)||isVideo(n);}
   function cacheGet(){return null;} function cacheSet(){}
@@ -203,13 +206,15 @@
 
   function fetchJSON(url){return fetch(url,{headers:{'Accept':'application/vnd.github+json'}}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
 
-  // include ALL media in the manifest (no filtering here)
+  // Track ALL paths so we can detect -thumb variants
   function buildManifestFromTree(tree){
     var f=tree&&tree.tree?tree.tree:[];
-    var m={portfolio:[],travels:{},profile:[]};
+    var m={portfolio:[],travels:{},profile:[],all:new Set()};
     for(var i=0;i<f.length;i++){
       var it=f[i];
-      if(it.type!=='blob'||!isMedia(it.path)) continue;
+      if(it.type!=='blob') continue;
+      m.all.add(it.path); // record everything
+      if(!isMedia(it.path)) continue;
       if(it.path.startsWith('portfolio/')) m.portfolio.push(it.path);
       else if(it.path.startsWith('travels/')){
         var parts=it.path.split('/');
@@ -222,13 +227,27 @@
     return m;
   }
 
-  function loadManifest(){return fetch('/manifest.json',{cache:'no-store'}).then(r=>{if(r.ok)return r.json();throw new Error('no manifest');}).catch(()=>fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref)).then(c=>fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+c.commit.tree.sha+'?recursive=1')).then(buildManifestFromTree));}
+  function loadManifest(){
+    return fetch('/manifest.json',{cache:'no-store'})
+      .then(r=>{if(r.ok)return r.json();throw new Error('no manifest');})
+      .catch(()=>fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
+        .then(c=>fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+c.commit.tree.sha+'?recursive=1'))
+        .then(buildManifestFromTree));
+  }
 
   function listPortfolio(m){return m.portfolio.map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));}
-  function listTravelAll(m){var out=[];for(var f in m.travels){m.travels[f].forEach(p=>out.push({src:rawURL(p),alt:p.split('/').pop(),folder:f,type:isVideo(p)?'video':'image'}));}return out;}
+  function listTravelAll(m){
+    var out=[];
+    for(var f in m.travels){
+      m.travels[f].forEach(function(p){
+        out.push({src:rawURL(p),alt:p.split('/').pop(),folder:f,type:isVideo(p)?'video':'image'});
+      });
+    }
+    return out;
+  }
   function listAlbum(m,folder){return (m.travels[folder]||[]).map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));}
 
-  // hero prefers profile image ending in *star, else falls back
+  // choose hero profile: prefer *star
   function heroFromProfile(m){
     var pics=m.profile.filter(isImg);
     var starPic = pics.find(function(p){ return endsWithToken(p,'star'); });
@@ -238,22 +257,60 @@
   function byId(id){return document.getElementById(id);} function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
   function makeVideo(src){var v=document.createElement('video');v.src=src;v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.controls=false;return v;}
 
-  function mountGrid(id,files,onClick){var el=byId(id);clear(el);if(!files.length){var p=document.createElement('p');p.textContent='Nothing yet.';p.style.color='#9aa7bd';el.appendChild(p);return;}files.forEach(f=>{var fig=document.createElement('figure');fig.className='shot';var node=f.type==='video'?makeVideo(f.src):(Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'}));if(onClick)fig.addEventListener('click',()=>onClick(f));fig.appendChild(node);el.appendChild(fig);});}
+  function mountGrid(id,files,onClick){
+    var el=byId(id);clear(el);
+    if(!files.length){
+      var p=document.createElement('p');p.textContent='Nothing yet.';p.style.color='#9aa7bd';el.appendChild(p);return;
+    }
+    files.forEach(function(f){
+      var fig=document.createElement('figure');fig.className='shot';
+      var node=f.type==='video'
+        ? makeVideo(f.src)
+        : Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy',decoding:'async'});
+      if(onClick)fig.addEventListener('click',function(){onClick(f);});
+      fig.appendChild(node);el.appendChild(fig);
+    });
+  }
 
-  // lightbox
-  var lightboxEl;function setupLightbox(){lightboxEl=byId('lightbox');lightboxEl.addEventListener('click',e=>{if(e.target===lightboxEl||e.target.classList.contains('close'))closeLightbox();});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox();});}
-  function openLightbox(f){lightboxEl.innerHTML='<button class="close">✕</button>';if(f.type==='video'){var v=makeVideo(f.src);v.controls=true;lightboxEl.appendChild(v);}else{var img=new Image();img.src=f.src;img.alt=f.alt;lightboxEl.appendChild(img);}lightboxEl.classList.add('open');}
+  // Lightbox
+  var lightboxEl;
+  function setupLightbox(){
+    lightboxEl=byId('lightbox');
+    lightboxEl.addEventListener('click',function(e){
+      if(e.target===lightboxEl||e.target.classList.contains('close')) closeLightbox();
+    });
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeLightbox(); });
+  }
+  function openLightbox(f){
+    lightboxEl.innerHTML='<button class="close">✕</button>';
+    if(f.type==='video'){var v=makeVideo(f.src);v.controls=true;lightboxEl.appendChild(v);}
+    else{var img=new Image();img.src=f.src;img.alt=f.alt;lightboxEl.appendChild(img);}
+    lightboxEl.classList.add('open');
+  }
   function closeLightbox(){lightboxEl.classList.remove('open');}
 
   var views={home:byId('view-home'),portfolio:byId('view-portfolio'),travels:byId('view-travels'),album:byId('view-album')};
-  function show(v){Object.values(views).forEach(x=>x.classList.add('hidden'));views[v].classList.remove('hidden');scrollTo(0,0);}
+  function show(v){Object.values(views).forEach(function(x){x.classList.add('hidden');});views[v].classList.remove('hidden');scrollTo(0,0);}
+
+  // --- Thumbnail helpers ---
+  function withThumb(path, manifest){
+    var dot = path.lastIndexOf('.');
+    if (dot < 0) return path;
+    var thumb = path.slice(0, dot) + '-thumb' + path.slice(dot);
+    return manifest.all.has(thumb) ? thumb : path;
+  }
+  function toRepoPath(raw){
+    // Convert a raw.githubusercontent URL back to repo path
+    var needle = '/' + GH.ref + '/';
+    var i = raw.indexOf(needle);
+    return i >= 0 ? decodeURI(raw.slice(i + needle.length)) : raw;
+  }
 
   function routeWith(m){
     var h=(location.hash||'').slice(1);
 
     if(h.startsWith('/portfolio')){
       show('portfolio');
-      // show ALL portfolio media
       mountGrid('portfolioGrid',listPortfolio(m),openLightbox);
       return;
     }
@@ -261,15 +318,17 @@
     if(h.startsWith('/travels')){
       show('travels');
       var g={};
-      listTravelAll(m).forEach(f=>(g[f.folder]||(g[f.folder]=[])).push(f));
+      listTravelAll(m).forEach(function(f){ (g[f.folder]||(g[f.folder]=[])).push(f); });
       var wrap=byId('travelCards');clear(wrap);
       for(var folder in g){
-        var files=g[folder]; // ALL files in this folder
+        var files=g[folder];
         var card=document.createElement('article');card.className='place';
-        // prefer *chosenstar, else any *star, else first file
         var chosen = files.find(function(f){ return endsWithToken(f.alt,'chosenstar'); });
         var starred = chosen || files.find(function(f){ return endsWithToken(f.alt,'star'); }) || files[0];
-        card.appendChild(starred.type==='video'?makeVideo(starred.src):Object.assign(new Image(),{src:starred.src,alt:folder}));
+        var node = (starred.type==='video')
+          ? makeVideo(starred.src)
+          : Object.assign(new Image(),{src:starred.src,alt:folder,loading:'lazy',decoding:'async'});
+        card.appendChild(node);
         var ov=document.createElement('div');ov.className='overlay';
         ov.innerHTML='<h4>'+folder+'</h4><p>'+files.length+' files</p><a class="chip" href="#/travel/'+encodeURIComponent(folder)+'">View</a>';
         card.appendChild(ov);
@@ -281,23 +340,42 @@
     if(h.startsWith('/travel/')){
       var folder=decodeURIComponent(h.split('/')[2]);
       show('album');byId('albumTitle').textContent=folder;
-      // show ALL files within the folder
       mountGrid('albumGrid',listAlbum(m,folder),openLightbox);
       return;
     }
 
-    // HOME: show only *star items in the stream (mixed), fallback to all if none
+    // HOME: prefer *star; then swap each to -thumb if it exists
     show('home');
-    var all=[...listPortfolio(m),...listTravelAll(m)];
+    var all=[].concat(listPortfolio(m),listTravelAll(m));
     var starredOnly = all.filter(function(f){ return endsWithToken(f.alt,'star'); });
     var stream = (starredOnly.length ? starredOnly : all).slice(0,12);
-    mountGrid('streamGrid',stream, function(f){
+
+    // Swap to -thumb when present
+    stream = stream.map(function(f){
+      if (f.type === 'video') return f; // thumbs are for images only
+      var repoPath = toRepoPath(f.src);
+      var chosen = withThumb(repoPath, m);
+      return Object.assign({}, f, { src: rawURL(chosen) });
+    });
+
+    mountGrid('streamGrid',stream,function(f){
       if(f.folder) location.hash='#/travel/'+encodeURIComponent(f.folder);
       else location.hash='#/portfolio';
     });
   }
 
-  function boot(){setupLightbox();loadManifest().then(m=>{byId('heroImg').src=heroFromProfile(m);routeWith(m);window.addEventListener('hashchange',()=>routeWith(m));});}
+  function boot(){
+    setupLightbox();
+    loadManifest().then(function(m){
+      var hero = byId('heroImg');
+      hero.decoding = 'sync';
+      hero.loading = 'eager';
+      hero.setAttribute('fetchpriority','high');
+      hero.src = heroFromProfile(m);
+      routeWith(m);
+      window.addEventListener('hashchange',function(){ routeWith(m); });
+    });
+  }
   boot();
 })();
 </script>
