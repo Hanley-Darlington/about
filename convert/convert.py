@@ -15,8 +15,8 @@ Run:
 from pathlib import Path
 from PIL import Image, ImageOps
 
-INPUT_DIR  = Path("FullJPGs")
-OUTPUT_DIR = Path("ConvWEBP")
+INPUT_DIR  = Path("convert/FullJPGs")
+OUTPUT_DIR = Path("convert/ConvWEBP")
 QUALITY    = 80   # WebP quality (0–100)
 
 EXTS = {".jpg", ".jpeg"}
