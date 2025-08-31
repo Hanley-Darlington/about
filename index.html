@@ -11,8 +11,6 @@
 
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <!-- AOS -->
-  <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet" />
 
   <style>
     :root{
@@ -108,8 +106,29 @@
     .lightbox.open{ display: flex; }
     .lightbox img, .lightbox video{max-width: min(1200px, 95vw);max-height: 90vh;border-radius: 16px;box-shadow: var(--shadow);background:#000;}
     .lightbox .close{position: absolute; top: 14px; right: 14px;padding: 8px 12px; border-radius: 999px;background: rgba(255,255,255,.12);border: 1px solid rgba(255,255,255,.18);color: #fff; cursor: pointer;}
-    /* AOS wrapper doesn't change layout */
-    .aos-wrap{display:block}
+
+    /* -------- Scroll animations (AOS-like, no lib) -------- */
+    .anim-wrap{display:block;will-change:transform,opacity}
+    .anim-play.zoom-in        {animation:zin .6s ease-out both}
+    .anim-play.zoom-in-up     {animation:zinUp .6s ease-out both}
+    .anim-play.zoom-in-down   {animation:zinDown .6s ease-out both}
+    .anim-play.zoom-in-left   {animation:zinLeft .6s ease-out both}
+    .anim-play.zoom-in-right  {animation:zinRight .6s ease-out both}
+
+    @keyframes zin      {from{opacity:0;transform:scale(.92)}         to{opacity:1;transform:none}}
+    @keyframes zinUp    {from{opacity:0;transform:translateY(24px) scale(.92)}   to{opacity:1;transform:none}}
+    @keyframes zinDown  {from{opacity:0;transform:translateY(-24px) scale(.92)}  to{opacity:1;transform:none}}
+    @keyframes zinLeft  {from{opacity:0;transform:translateX(-24px) scale(.92)}  to{opacity:1;transform:none}}
+    @keyframes zinRight {from{opacity:0;transform:translateX(24px) scale(.92)}   to{opacity:1;transform:none}}
+
+    @media (prefers-reduced-motion: reduce){
+      .anim-play.zoom-in,
+      .anim-play.zoom-in-up,
+      .anim-play.zoom-in-down,
+      .anim-play.zoom-in-left,
+      .anim-play.zoom-in-right{animation:none}
+    }
+    /* ------------------------------------------------------ */
   </style>
 </head>
 <body>
@@ -185,9 +204,6 @@
   <button class="close" aria-label="Close">✕</button>
 </div>
 
-<!-- AOS -->
-<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
-
 <script>
 (function(){
   'use strict';
@@ -200,8 +216,6 @@
   function rawURL(path){ return 'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(path)+'?v='+Date.now(); }
   function hasExt(n,exts){n=(n||'').toLowerCase();for(var i=0;i<exts.length;i++){if(n.endsWith(exts[i]))return true;}return false;}
   function isImg(n){return hasExt(n,IMG_EXT);} function isVideo(n){return hasExt(n,VIDEO_EXT);} function isMedia(n){return isImg(n)||isVideo(n);}
-  function cacheGet(){return null;} function cacheSet(){}
-
   function endsWithToken(path, token){
     var base = (path||'').split('/').pop().toLowerCase();
     var dot = base.lastIndexOf('.');
@@ -210,7 +224,6 @@
   }
 
   function fetchJSON(url){return fetch(url,{headers:{'Accept':'application/vnd.github+json'}}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
-
   function buildManifestFromTree(tree){
     var f=tree&&tree.tree?tree.tree:[];
     var m={portfolio:[],travels:{},profile:[]};
@@ -228,19 +241,20 @@
     }
     return m;
   }
-
-  function loadManifest(){return fetch('/manifest.json',{cache:'no-store'}).then(r=>{if(r.ok)return r.json();throw new Error('no manifest');}).catch(()=>fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref)).then(c=>fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+c.commit.tree.sha+'?recursive=1')).then(buildManifestFromTree));}
+  function loadManifest(){
+    return fetch('/manifest.json',{cache:'no-store'}).then(r=>{if(r.ok)return r.json();throw new Error('no manifest');})
+      .catch(()=>fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
+        .then(c=>fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+c.commit.tree.sha+'?recursive=1'))
+        .then(buildManifestFromTree));
+  }
 
   function listPortfolio(m){return m.portfolio.map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));}
   function listTravelAll(m){var out=[];for(var f in m.travels){m.travels[f].forEach(p=>out.push({src:rawURL(p),alt:p.split('/').pop(),folder:f,type:isVideo(p)?'video':'image'}));}return out;}
   function listAlbum(m,folder){return (m.travels[folder]||[]).map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));}
 
-  // Homepage list strictly from /homepage/1..12.webp
+  // Homepage images: /homepage/1..12.webp
   function listHomepage(){
-    var arr=[];
-    for(var i=1;i<=12;i++){
-      arr.push({src:'/homepage/'+i+'.webp',alt:'home-'+i,type:'image'});
-    }
+    var arr=[]; for(var i=1;i<=12;i++) arr.push({src:'/homepage/'+i+'.webp',alt:'home-'+i,type:'image'});
     return arr;
   }
 
@@ -251,30 +265,33 @@
     return starPic ? rawURL(starPic) : (pics.length ? rawURL(pics[0]) : 'user.png');
   }
 
-  function byId(id){return document.getElementById(id);} function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
+  function byId(id){return document.getElementById(id);}
+  function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
   function makeVideo(src){var v=document.createElement('video');v.src=src;v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.controls=false;return v;}
 
-  // Standard grid
+  // Standard grid (non-home)
   function mountGrid(id,files,onClick){
     var el=byId(id); clear(el);
-    if(!files.length){
-      var p=document.createElement('p');p.textContent='Nothing yet.';p.style.color='#9aa7bd';el.appendChild(p);return;
-    }
+    if(!files.length){var p=document.createElement('p');p.textContent='Nothing yet.';p.style.color='#9aa7bd';el.appendChild(p);return;}
     files.forEach(f=>{
       var fig=document.createElement('figure');fig.className='shot';
       var node=f.type==='video'?makeVideo(f.src):(Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'}));
       if(onClick) fig.addEventListener('click',()=>onClick(f));
-      fig.appendChild(node);
-      el.appendChild(fig);
+      fig.appendChild(node); el.appendChild(fig);
     });
     return el;
   }
 
-  // Homepage grid (wrap each .shot so AOS never touches the hover target)
+  // Home grid with animation wrapper (so hover stays on .shot)
   function mountHomeGrid(id,files){
     var el=byId(id); clear(el);
-    files.forEach(f=>{
-      var wrap=document.createElement('div'); wrap.className='aos-wrap';
+    var animOrder = [
+      'zoom-in-right','zoom-in-down','zoom-in-down','zoom-in-left',
+      'zoom-in-right','zoom-in','zoom-in','zoom-in-left',
+      'zoom-in-right','zoom-in-up','zoom-in-up','zoom-in-left'
+    ];
+    files.forEach(function(f,idx){
+      var wrap = document.createElement('div'); wrap.className='anim-wrap '+animOrder[idx];
       var fig=document.createElement('figure'); fig.className='shot';
       var img=Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'});
       fig.appendChild(img); wrap.appendChild(fig); el.appendChild(wrap);
@@ -286,10 +303,8 @@
   var lightboxEl;
   function setupLightbox(){
     lightboxEl=byId('lightbox');
-    lightboxEl.addEventListener('click',e=>{
-      if(e.target===lightboxEl||e.target.classList.contains('close'))closeLightbox();
-    });
-    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox();});
+    lightboxEl.addEventListener('click',e=>{ if(e.target===lightboxEl||e.target.classList.contains('close'))closeLightbox(); });
+    document.addEventListener('keydown',e=>{ if(e.key==='Escape')closeLightbox(); });
   }
   function openLightbox(f){
     lightboxEl.innerHTML='<button class="close">✕</button>';
@@ -302,88 +317,52 @@
   var views={home:byId('view-home'),portfolio:byId('view-portfolio'),travels:byId('view-travels'),album:byId('view-album')};
   function show(v){Object.values(views).forEach(x=>x.classList.add('hidden'));views[v].classList.remove('hidden');scrollTo(0,0);}
 
-  // --- AOS control (desktop homepage only; enable after scroll past hero; disable when above) ---
-  var homeScrollHandler = null;
-  var aosEnabled = false;
-
-  // map animations onto wrappers (not figures)
-  function mapHomeAOS(gridEl){
-    if(!isDesktop || !window.AOS) return;
-    var anim = [
-      'zoom-in-right','zoom-in-down','zoom-in-down','zoom-in-left',
-      'zoom-in-right','zoom-in','zoom-in','zoom-in-left',
-      'zoom-in-right','zoom-in-up','zoom-in-up','zoom-in-left'
-    ];
-    var wraps = Array.prototype.slice.call(gridEl.querySelectorAll('.aos-wrap'));
-    wraps.forEach(function(wrap,i){
-      wrap.removeAttribute('data-aos');
-      wrap.classList.remove('aos-init','aos-animate');
-      if(anim[i]) wrap.setAttribute('data-aos',anim[i]);
+  /* ---------- Scroll toggle for animations (desktop only) ---------- */
+  var homeScrollHandler=null, animEnabled=false;
+  function enableHomeAnims(gridEl){
+    if(animEnabled) return;
+    gridEl.querySelectorAll('.anim-wrap').forEach(function(w,i){
+      // restart animation reliably
+      w.classList.remove('anim-play');
+      void w.offsetWidth;           // force reflow
+      w.classList.add('anim-play');
+      // small stagger (optional)
+      w.style.animationDelay = (Math.floor(i/4)*40 + (i%4)*20)+'ms';
     });
+    animEnabled=true;
   }
-
-  function clearAOSIn(el){
-    if(!window.AOS) return;
-    el.querySelectorAll('.aos-wrap').forEach(function(wrap){
-      wrap.removeAttribute('data-aos');
-      wrap.classList.remove('aos-init','aos-animate');
+  function disableHomeAnims(gridEl){
+    if(!gridEl) return;
+    gridEl.querySelectorAll('.anim-wrap').forEach(function(w){
+      w.classList.remove('anim-play');
+      w.style.animationDelay = '';
     });
-    AOS.refreshHard();
+    animEnabled=false;
   }
-
-  function enableHomeAOS(gridEl){
-    if(aosEnabled) return;
-    mapHomeAOS(gridEl);
-    // prep hidden state so first frame after init animates smoothly
-    gridEl.querySelectorAll('.aos-wrap[data-aos]').forEach(function(w){ w.classList.add('aos-init'); });
-    requestAnimationFrame(function(){
-      AOS.init({ once:false, duration:600, easing:'ease-out-cubic', offset:80, mirror:false });
-      AOS.refreshHard();
-      aosEnabled = true;
-    });
-  }
-
-  function disableHomeAOS(gridEl){
-    if(!aosEnabled) { clearAOSIn(gridEl || document); return; }
-    clearAOSIn(gridEl || document);
-    aosEnabled = false;
-  }
-
   function installHomeScrollToggle(gridEl){
-    if(!isDesktop || !window.AOS) return;
+    if(!isDesktop){ disableHomeAnims(gridEl); return; }
     var hero = document.getElementById('homeHero');
-    var threshold = hero.offsetTop + hero.offsetHeight - 60; // bottom of hero
-    var wasEnabled = false;
-
+    var threshold = hero.offsetTop + hero.offsetHeight - 60;
     function onScroll(){
       var y = window.scrollY || document.documentElement.scrollTop || 0;
-      if(!wasEnabled && y >= threshold){
-        enableHomeAOS(gridEl); wasEnabled = true;
-      }else if(wasEnabled && y < threshold){
-        disableHomeAOS(gridEl); wasEnabled = false;
-      }
+      if(y >= threshold) enableHomeAnims(gridEl);
+      else disableHomeAnims(gridEl);
     }
-    disableHomeAOS(gridEl); // clean start (no AOS, hover works)
-    window.addEventListener('scroll', onScroll, { passive:true });
     homeScrollHandler = onScroll;
+    window.addEventListener('scroll', onScroll, {passive:true});
     onScroll(); // set initial state
   }
-
-  function uninstallHomeScrollToggle(){
-    if(homeScrollHandler){
-      window.removeEventListener('scroll', homeScrollHandler);
-      homeScrollHandler = null;
-    }
-    aosEnabled = false;
+  function uninstallHomeScrollToggle(gridEl){
+    if(homeScrollHandler){ window.removeEventListener('scroll', homeScrollHandler); homeScrollHandler=null; }
+    disableHomeAnims(gridEl||document.getElementById('streamGrid'));
   }
-  // --------------------------------------------------------------------
+  /* ---------------------------------------------------------------- */
 
   function routeWith(m){
     var h=(location.hash||'').slice(1);
 
     if(h.startsWith('/portfolio')){
       uninstallHomeScrollToggle();
-      disableHomeAOS(document);
       show('portfolio');
       mountGrid('portfolioGrid',listPortfolio(m),openLightbox);
       return;
@@ -391,11 +370,10 @@
 
     if(h.startsWith('/travels')){
       uninstallHomeScrollToggle();
-      disableHomeAOS(document);
       show('travels');
       var g={};
       listTravelAll(m).forEach(f=>(g[f.folder]||(g[f.folder]=[])).push(f));
-      var wrap=byId('travelCards');clear(wrap);
+      var wrap=byId('travelCards'); clear(wrap);
       for(var folder in g){
         var files=g[folder];
         var card=document.createElement('article');card.className='place';
@@ -412,18 +390,17 @@
 
     if(h.startsWith('/travel/')){
       uninstallHomeScrollToggle();
-      disableHomeAOS(document);
       var folder=decodeURIComponent(h.split('/')[2]);
-      show('album');byId('albumTitle').textContent=folder;
+      show('album'); byId('albumTitle').textContent=folder;
       mountGrid('albumGrid',listAlbum(m,folder),openLightbox);
       return;
     }
 
-    // HOME: strictly 12 images from /homepage/
+    // HOME
     show('home');
     var gridEl = mountHomeGrid('streamGrid', listHomepage());
-    uninstallHomeScrollToggle();
-    installHomeScrollToggle(gridEl); // animations only after scroll; removed when scrolled back up
+    uninstallHomeScrollToggle(gridEl); // ensure clean slate
+    installHomeScrollToggle(gridEl);   // enable-on-scroll behavior
   }
 
   function boot(){
