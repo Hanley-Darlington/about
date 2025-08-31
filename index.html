@@ -87,6 +87,30 @@
       #streamGrid .shot::before,#portfolioGrid .shot::before,#albumGrid .shot::before,.place::before{content:"";display:block;padding-top:56.25%}
       #streamGrid .shot>img,#streamGrid .shot>video,#portfolioGrid .shot>img,#portfolioGrid .shot>video,#albumGrid .shot>img,#albumGrid .shot>video,.place>img,.place>video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
     }
+
+    /* ---- Footer pinned & socials centered ---- */
+    html, body { height: 100%; }
+    body { min-height: 100dvh; display: flex; flex-direction: column; }
+    main { flex: 1; }
+
+    footer {
+      margin-top: auto;
+      padding: 28px 0 calc(28px + env(safe-area-inset-bottom));
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    .footer-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+    .social {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
   </style>
 </head>
 <body>
