@@ -12,10 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Preload the hero image -->
-  <link rel="preload" as="image" href="/profile/profile-star.webp" fetchpriority="high" />
-
-  <!-- AOS (Animate On Scroll) -->
+  <!-- AOS (Animate On Scroll) for HOME only -->
   <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet" />
 
   <style>
@@ -37,15 +34,19 @@
     a{color:inherit;text-decoration:none}
     .container{width:min(1200px,92%);margin-inline:auto}
 
-    /* Hide AOS until ready */
+    /* AOS visibility: hide targets until enabled (home only uses data-aos) */
     body:not(.aos-ready) [data-aos]{opacity:0}
 
+    /* Header (clickable to Home) */
     header{
-      position:sticky; top:0; z-index:9999;
+      position:sticky;
+      top:0;
+      z-index:9999;
       background:rgba(15,21,36,.78);
       backdrop-filter:saturate(150%) blur(12px);
       border-bottom:1px solid rgba(255,255,255,.08);
-      cursor:pointer; isolation:isolate;
+      cursor:pointer;
+      isolation:isolate;
     }
 
     .nav{display:flex;justify-content:flex-end;align-items:center;padding:14px 28px;gap:12px}
@@ -70,21 +71,36 @@
     .hero-card img{width:100%;height:auto;object-fit:cover}
 
     .hidden{display:none}
+    .view-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+    .view-head h2{font-size:clamp(24px,3vw,34px)}
+    .back{padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.14)}
+
     .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px}
     .shot{border-radius:var(--radius);overflow:hidden;background:#111;box-shadow:var(--shadow);cursor:pointer}
 
-    #streamGrid .shot{aspect-ratio:16/9;}
-    #streamGrid .shot img{width:100%;height:100%;object-fit:cover;background:#000;}
-
-    footer{padding:28px 0;border-top:1px solid rgba(255,255,255,.08)}
-    .footer-center{display:flex;flex-direction:column;align-items:center;gap:10px}
-    .social{display:flex;gap:10px}
-
+    /* Keep hover effects (never removed) */
     @media (hover:hover) and (pointer:fine){
       .shot{transition: transform .18s ease, box-shadow .18s ease;will-change: transform;}
       .shot:hover{transform: translateY(-4px) scale(1.02);box-shadow: 0 20px 50px rgba(0,0,0,.6);}
       .shot:focus-visible{outline: 2px solid var(--brand);outline-offset: 2px;}
+      .place{transition: transform .18s ease, box-shadow .18s ease;}
+      .place:hover{transform: translateY(-3px);box-shadow: 0 18px 40px rgba(0,0,0,.55);}
     }
+
+    #streamGrid .shot { aspect-ratio:16/9; }
+    #streamGrid .shot img { width:100%;height:100%;object-fit:cover;background:#000; }
+
+    .travel-grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+    .place{position:relative;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);aspect-ratio:16/9;background:#000}
+    .place img,.place video{width:100%;height:100%;object-fit:cover;display:block;background:#000}
+    .place .overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.65),rgba(0,0,0,.08) 60%);display:flex;flex-direction:column;justify-content:flex-end;padding:20px}
+    .place h4{margin:0 0 6px;font-size:18px}
+    .place p{margin:0 0 10px;font-size:14px;color:var(--muted)}
+    .place a{align-self:start}
+
+    footer{padding:28px 0;border-top:1px solid rgba(255,255,255,.08)}
+    .footer-center{display:flex;flex-direction:column;align-items:center;gap:10px}
+    .social{display:flex;gap:10px}
 
     .lightbox{position: fixed; inset: 0; z-index: 100;display: none; align-items: center; justify-content: center;background: rgba(0,0,0,.82); padding: 20px;}
     .lightbox.open{ display: flex; }
@@ -93,10 +109,9 @@
   </style>
 </head>
 <body>
-<header>
+<header onclick="if(!event.target.closest('a')) location.hash='#/';">
   <div class="nav container">
     <nav class="nav-links">
-      <a class="chip" href="#/">Home</a>
       <a class="chip" href="#/portfolio">Portfolio</a>
       <a class="chip" href="#/travels">Travel</a>
       <a class="pill" href="https://hdbot.io" target="_blank" rel="noopener">ALGOs</a>
@@ -111,11 +126,40 @@
       <div class="hero">
         <div><h1>William Darlington</h1><p>Vires in Numeris</p><p>All Visuals are Authentic</p></div>
         <div class="hero-card">
+          <!-- load fast; you can add a <link rel="preload"> if you like -->
           <img id="heroImg" src="/profile/profile-star.webp" alt="Profile" width="520" height="520" fetchpriority="high" loading="eager" decoding="async">
         </div>
       </div>
+
+      <!-- HOME GRID (from /homepage/ only) -->
       <div class="gallery stream-grid" id="streamGrid"></div>
+      <!-- When this enters viewport: enable AOS; when it leaves: disable -->
       <div id="home-bottom-sentinel" style="height:1px"></div>
+    </div>
+  </section>
+
+  <!-- Portfolio + Travel sections left intact; Travel will NOT be animated -->
+  <section id="view-portfolio" class="hidden">
+    <div class="container">
+      <div class="view-head"><h2>Portfolio</h2><a class="back" href="#/">← Home</a></div>
+      <div class="gallery" id="portfolioGrid"><p style="color:#9aa7bd">Loading…</p></div>
+      <div id="portfolioError"></div>
+    </div>
+  </section>
+
+  <section id="view-travels" class="hidden">
+    <div class="container">
+      <div class="view-head"><h2>Travel</h2><a class="back" href="#/">← Home</a></div>
+      <div class="travel-grid" id="travelCards"><p style="color:#9aa7bd">Loading…</p></div>
+      <div id="travelsError"></div>
+    </div>
+  </section>
+
+  <section id="view-album" class="hidden">
+    <div class="container">
+      <div class="view-head"><h2 id="albumTitle">Album</h2><a class="back" href="#/travels">← All trips</a></div>
+      <div class="gallery" id="albumGrid"><p style="color:#9aa7bd">Loading…</p></div>
+      <div id="albumError"></div>
     </div>
   </section>
 </main>
@@ -133,35 +177,35 @@
   <button class="close" aria-label="Close">✕</button>
 </div>
 
+<!-- AOS JS (used for HOME only) -->
 <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
 
 <script>
 (()=>{
-  const $ = id=>document.getElementById(id);
+  'use strict';
+  const $ = (id)=>document.getElementById(id);
   const isMobile = ()=> window.matchMedia('(max-width:700px)').matches;
 
-  // animation mapping for 12 homepage slots
-  function homeAnim(i){
-    const n=i+1;
+  /* ---------------- HOME: fixed 12 images from /homepage/ ---------------- */
+  function homeAnim(index){
+    const n=index+1;
     if(n===1) return 'zoom-in-right';
-    if(n===2||n===3) return 'zoom-in-down';
+    if(n===2 || n===3) return 'zoom-in-down';
     if(n===4) return 'zoom-in-left';
     if(n===5) return 'zoom-in-right';
-    if(n===6||n===7) return 'zoom-in';
+    if(n===6 || n===7) return 'zoom-in';
     if(n===8) return 'zoom-in-left';
     if(n===9) return 'zoom-in-right';
-    if(n===10||n===11) return 'zoom-in-up';
+    if(n===10 || n===11) return 'zoom-in-up';
     if(n===12) return 'zoom-in-left';
     return 'zoom-in';
   }
 
-  // load homepage grid
   function mountHomepageGrid(){
     const el=$('streamGrid'); el.innerHTML='';
     for(let i=1;i<=12;i++){
-      const fig=document.createElement('figure');
-      fig.className='shot';
-      if(!isMobile()) fig.setAttribute('data-aos', homeAnim(i-1));
+      const fig=document.createElement('figure'); fig.className='shot';
+      if(!isMobile()){ fig.setAttribute('data-aos', homeAnim(i-1)); } // desktop only
       const img=new Image();
       img.src='/homepage/'+i+'.webp';
       img.alt='Homepage '+i;
@@ -172,16 +216,25 @@
     if(window.AOS && AOS.refresh) AOS.refresh();
   }
 
-  // toggle AOS at bottom sentinel
+  /* ---------------- AOS toggle at bottom of HOME ---------------- */
+  let aosInited=false;
+  function enableAOS(){
+    if(aosInited) return;
+    aosInited=true;
+    if(window.AOS){ AOS.init({ once:true, duration:500, easing:'ease-out' }); }
+  }
   function initAOSToggle(){
     const sentinel=$('home-bottom-sentinel');
-    if(!sentinel || !('IntersectionObserver' in window)) return;
-    const io=new IntersectionObserver(entries=>{
-      entries.forEach(entry=>{
-        if(entry.isIntersecting){
+    if(!('IntersectionObserver' in window) || !sentinel) return;
+    const io=new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{
+        if(e.isIntersecting){
+          // Turning on: init once + reveal
+          enableAOS();
           document.body.classList.add('aos-ready');
-          if(window.AOS){ AOS.init({once:true,duration:500,easing:'ease-out'}); if(AOS.refresh) AOS.refresh(); }
-        } else {
+          if(window.AOS && AOS.refresh) AOS.refresh();
+        }else{
+          // Turning off on upward scroll
           document.body.classList.remove('aos-ready');
         }
       });
@@ -189,14 +242,109 @@
     io.observe(sentinel);
   }
 
+  /* ---------------- Manifest-backed sections (Portfolio/Travel/Album) ---- */
+  const GH = { owner:'Hanley-Darlington', repo:'about', ref:'main' };
+  const IMG_EXT=['.jpg','.jpeg','.png','.webp','.gif','.avif'];
+  const VIDEO_EXT=['.mp4','.webm'];
+  const hasExt=(n,exts)=>{ n=(n||'').toLowerCase(); for(let i=0;i<exts.length;i++) if(n.endsWith(exts[i])) return true; return false; };
+  const isImg =(n)=>hasExt(n,IMG_EXT);
+  const isVideo=(n)=>hasExt(n,VIDEO_EXT);
+  const isMedia=(n)=>isImg(n)||isVideo(n);
+  const rawURL=(p)=>'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(p)+'?v='+Date.now();
+  const endsWithToken=(p,t)=>{ const b=(p||'').split('/').pop().toLowerCase(); const d=b.lastIndexOf('.'); const nm=d>=0?b.slice(0,d):b; return nm.endsWith(String(t).toLowerCase()); };
+  const fetchJSON=(u)=>fetch(u,{headers:{'Accept':'application/vnd.github+json'}}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});
+  const buildManifestFromTree=(tree)=>{
+    const f=tree && tree.tree ? tree.tree : []; const m={portfolio:[],travels:{},profile:[]};
+    for(let i=0;i<f.length;i++){
+      const it=f[i]; if(it.type!=='blob'||!isMedia(it.path)) continue;
+      if(it.path.startsWith('portfolio/')) m.portfolio.push(it.path);
+      else if(it.path.startsWith('travels/')){
+        const parts=it.path.split('/'); if(parts.length>=3){ const folder=decodeURIComponent(parts[1]); (m.travels[folder]||(m.travels[folder]=[])).push(it.path); }
+      } else if(it.path.startsWith('profile/')) m.profile.push(it.path);
+    } return m;
+  };
+  const loadManifest=()=>fetch('/manifest.json',{cache:'no-store'})
+    .then(r=>{if(r.ok)return r.json(); throw new Error('no manifest');})
+    .catch(()=>fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/commits/'+encodeURIComponent(GH.ref))
+      .then(c=>fetchJSON('https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/git/trees/'+c.commit.tree.sha+'?recursive=1'))
+      .then(buildManifestFromTree));
+  const listPortfolio=(m)=>m.portfolio.map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));
+  const listTravelAll=(m)=>{ const out=[]; for(const f in m.travels){ m.travels[f].forEach(p=>out.push({src:rawURL(p),alt:p.split('/').pop(),folder:f,type:isVideo(p)?'video':'image'})); } return out; };
+  const listAlbum=(m,folder)=>(m.travels[folder]||[]).map(p=>({src:rawURL(p),alt:p.split('/').pop(),type:isVideo(p)?'video':'image'}));
+  const heroFromProfile=(m)=>{ const pics=m.profile.filter(isImg); const star=pics.find(p=>endsWithToken(p,'star')); return star?rawURL(star):(pics.length?rawURL(pics[0]):'/profile/profile-star.webp'); };
+
+  function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
+  function makeVideo(src){ const v=document.createElement('video'); v.src=src; v.muted=true; v.loop=true; v.autoplay=true; v.playsInline=true; v.controls=false; return v; }
+
+  // generic grid (used for non-home pages)
+  function mountGrid(id,files,onClick){
+    const el=$(id); clear(el);
+    if(!files.length){ const p=document.createElement('p'); p.textContent='Nothing yet.'; p.style.color='#9aa7bd'; el.appendChild(p); return; }
+    for(let i=0;i<files.length;i++){
+      const f=files[i];
+      const fig=document.createElement('figure'); fig.className='shot'; // NO data-aos here (no animations on travel/portfolio)
+      const node=f.type==='video'?makeVideo(f.src):Object.assign(new Image(),{src:f.src,alt:f.alt,loading:'lazy'});
+      if(onClick) fig.addEventListener('click',()=>onClick(f));
+      fig.appendChild(node); el.appendChild(fig);
+    }
+  }
+
   // lightbox
-  let lightbox=$('lightbox');
-  lightbox.addEventListener('click',e=>{if(e.target===lightbox||e.target.classList.contains('close'))lightbox.classList.remove('open');});
+  let lightboxEl=$('lightbox');
+  lightboxEl.addEventListener('click',e=>{ if(e.target===lightboxEl||e.target.classList.contains('close')) lightboxEl.classList.remove('open'); });
+
+  // views / routing
+  const views={home:$('view-home'),portfolio:$('view-portfolio'),travels:$('view-travels'),album:$('view-album')};
+  const show=(v)=>{ for(const k in views) views[k].classList.add('hidden'); views[v].classList.remove('hidden'); scrollTo(0,0); };
+
+  function routeWith(m){
+    const h=(location.hash||'').slice(1);
+
+    if(h.startsWith('/portfolio')){
+      show('portfolio');
+      mountGrid('portfolioGrid',listPortfolio(m),null);
+      return;
+    }
+
+    if(h.startsWith('/travels')){
+      show('travels');
+      const grouped={};
+      listTravelAll(m).forEach(f=>(grouped[f.folder]||(grouped[f.folder]=[])).push(f));
+      const wrap=$('travelCards'); clear(wrap);
+      for(const folder in grouped){
+        const files=grouped[folder];
+        const cover = files.find(f=>endsWithToken(f.alt,'star')) || files[0];
+        const card=document.createElement('article'); card.className='place'; // NO data-aos
+        card.appendChild(cover.type==='video'?makeVideo(cover.src):Object.assign(new Image(),{src:cover.src,alt:folder,loading:'lazy'}));
+        const ov=document.createElement('div'); ov.className='overlay';
+        ov.innerHTML='<h4>'+folder+'</h4><p>'+files.length+' files</p><a class="chip" href="#/travel/'+encodeURIComponent(folder)+'">View</a>';
+        card.appendChild(ov);
+        wrap.appendChild(card);
+      }
+      return;
+    }
+
+    if(h.startsWith('/travel/')){
+      const folder=decodeURIComponent(h.split('/')[2]);
+      show('album'); $('albumTitle').textContent=folder;
+      mountGrid('albumGrid',listAlbum(m,folder),null);
+      return;
+    }
+
+    // HOME:
+    show('home');
+    mountHomepageGrid();      // <-- ONLY from /homepage/
+  }
 
   // boot
   function boot(){
-    mountHomepageGrid();
-    initAOSToggle();
+    initAOSToggle();          // toggle AOS based on bottom sentinel
+    // load manifest for hero/travel/portfolio/albums only
+    loadManifest().then(m=>{
+      $('heroImg').src = heroFromProfile(m);
+      routeWith(m);
+      window.addEventListener('hashchange', ()=>routeWith(m));
+    });
   }
   boot();
 })();
