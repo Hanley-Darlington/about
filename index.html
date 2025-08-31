@@ -12,8 +12,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- AOS (used only on HOME) -->
+  <!-- AOS (home only) -->
   <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet" />
+
+  <!-- Preload hero -->
+  <link rel="preload" as="image" href="/profile/profile-star.webp" fetchpriority="high" />
 
   <style>
     :root{
@@ -37,6 +40,7 @@
     /* Only hide elements that have data-aos when AOS is disabled */
     body:not(.aos-ready) [data-aos]{opacity:0}
 
+    /* Header (clickable to Home) */
     header{
       position:sticky; top:0; z-index:9999;
       background:rgba(15,21,36,.78);
@@ -44,7 +48,6 @@
       border-bottom:1px solid rgba(255,255,255,.08);
       cursor:pointer; isolation:isolate;
     }
-
     .nav{display:flex;justify-content:flex-end;align-items:center;padding:14px 28px;gap:12px}
     .nav-links{display:flex;gap:12px;flex-wrap:wrap}
     .chip{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)}
@@ -68,14 +71,14 @@
 
     .hidden{display:none}
 
-    /* HOME grid — force consistent tiles, no gaps */
+    /* HOME grid — fixed columns, uniform tiles (no gaps) */
     #streamGrid{
       display:grid; gap:18px;
       grid-template-columns: repeat(4, 1fr);
     }
     @media (max-width:1100px){ #streamGrid{ grid-template-columns: repeat(3, 1fr); } }
-    @media (max-width:800px){ #streamGrid{ grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width:520px){ #streamGrid{ grid-template-columns: 1fr; } }
+    @media (max-width:800px){  #streamGrid{ grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width:520px){  #streamGrid{ grid-template-columns: 1fr; } }
 
     #streamGrid .shot{
       border-radius:var(--radius); overflow:hidden; background:#111;
@@ -83,7 +86,7 @@
     }
     #streamGrid .shot img{width:100%;height:100%;object-fit:cover;background:#000; display:block}
 
-    /* Travel cards keep hover */
+    /* Travel cards (no AOS here), hover kept */
     .travel-grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
     .place{position:relative;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);aspect-ratio:16/9;background:#000}
     .place img{width:100%;height:100%;object-fit:cover;display:block;background:#000}
@@ -143,6 +146,7 @@
     <div class="container">
       <div class="view-head"><h2>Portfolio</h2><a class="back" href="#/">← Home</a></div>
       <div class="gallery" id="portfolioGrid"><p style="color:#9aa7bd">Loading…</p></div>
+      <div id="portfolioError"></div>
     </div>
   </section>
 
@@ -150,6 +154,7 @@
     <div class="container">
       <div class="view-head"><h2>Travel</h2><a class="back" href="#/">← Home</a></div>
       <div class="travel-grid" id="travelCards"><p style="color:#9aa7bd">Loading…</p></div>
+      <div id="travelsError"></div>
     </div>
   </section>
 
@@ -157,6 +162,7 @@
     <div class="container">
       <div class="view-head"><h2 id="albumTitle">Album</h2><a class="back" href="#/travels">← All trips</a></div>
       <div class="gallery" id="albumGrid"><p style="color:#9aa7bd">Loading…</p></div>
+      <div id="albumError"></div>
     </div>
   </section>
 </main>
@@ -199,17 +205,22 @@
 
   function mountHomepageGrid(){
     const el=$('streamGrid'); el.innerHTML='';
+    const frag=document.createDocumentFragment();
+
     for(let i=1;i<=12;i++){
       const fig=document.createElement('figure'); fig.className='shot';
-      // desktop only animations
       if(!isMobile()) fig.setAttribute('data-aos', homeAnim(i-1));
       const img=new Image();
-      img.src='/homepage/'+i+'.webp';
+      // RELATIVE path (no leading slash)
+      img.src='homepage/'+i+'.webp';
       img.alt='Homepage '+i;
       img.loading='lazy';
+      // Remove the tile if image missing → no black gaps
+      img.onerror=()=>{ fig.remove(); if(window.AOS && AOS.refresh) AOS.refresh(); };
       fig.appendChild(img);
-      el.appendChild(fig);
+      frag.appendChild(fig);
     }
+    el.appendChild(frag);
     if(window.AOS && AOS.refresh) AOS.refresh();
   }
 
@@ -227,15 +238,15 @@
       for(const e of entries){
         if(e.isIntersecting){
           ensureAOS();
-          document.body.classList.add('aos-ready');   // show & animate
+          document.body.classList.add('aos-ready');       // show/animate
           if(window.AOS && AOS.refresh) AOS.refresh();
         }else{
-          document.body.classList.remove('aos-ready'); // hide again
+          document.body.classList.remove('aos-ready');     // hide again
         }
       }
     },{
-      threshold: 0,                 // fire as soon as it touches viewport
-      rootMargin: '0px 0px -10% 0'  // slightly earlier as you approach bottom
+      threshold: 0,                 // as soon as touches viewport
+      rootMargin: '0px 0px -10% 0'  // a bit earlier near the bottom
     });
     io.observe(sentinel);
   }
@@ -328,7 +339,7 @@
     mountHomepageGrid();
   }
 
-  // Lightbox close
+  // Lightbox close (kept for future use)
   const lightbox=$('lightbox');
   lightbox.addEventListener('click',e=>{ if(e.target===lightbox||e.target.classList.contains('close')) lightbox.classList.remove('open'); });
 
@@ -336,7 +347,7 @@
   function boot(){
     initAOSToggle();
     loadManifest().then(m=>{
-      $('heroImg').src = heroFromProfile(m);  // fast hero, then swap if repo has a star
+      $('heroImg').src = heroFromProfile(m);  // swaps if repo has a star
       routeWith(m);
       window.addEventListener('hashchange', ()=>routeWith(m));
     });
