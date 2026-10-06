@@ -11,7 +11,9 @@ const HOME={lat:46.8,lng:8.2,altitude:1.9};   // starting view and Recenter targ
 // A travels folder named exactly after a country works without a line; any other folder without one is listed, but stays off the globe.
 const PLACES={
   australia:['Australia',-25.3,133.8],
+  austria:['Austria',47.6,14.1],
   bali:['Indonesia',-8.4,115.2],
+  belgium:['Belgium',50.6,4.6],
   bordeaux:['France',44.84,-0.58],
   bosnia:['Bosnia',44,17.8],
   croatia:['Croatia',45.1,15.2],
@@ -21,9 +23,9 @@ const PLACES={
   germany:['Germany',51.1,10.4],
   greece:['Greece',38.3,23.3],
   guernsey:['Guernsey',49.45,-2.58],
-  hawaii:['United States of America',20.8,-156.9,'Hawaii'],
+  hawaii:['United States of America',20.8,-156.9],
   holland:['Holland',52.2,5.3],
-  isle:['England',50.69,-1.3,'Isle of Wight'],
+  'isle of wight':['England',50.69,-1.3],
   italy:['Italy',41.9,12.5],
   la:['United States of America',34.05,-118.24,'LA'],
   maldives:['Maldives',3.2,73.2],
@@ -36,6 +38,7 @@ const PLACES={
   singapore:['Singapore',1.35,103.82],
   'south africa':['South Africa',-29,24.5],
   spain:['Spain',40.2,-3.7],
+  'sri lanka':['Sri Lanka',7.6,80.7],
   sweden:['Sweden',62,15],
   switzerland:['Switzerland',46.8,8.2],
   tanzania:['Tanzania',-6.4,34.9],
@@ -71,7 +74,7 @@ const css=new Promise((res,rej)=>{const l=document.createElement('link'); l.rel=
 // rough centre of a country: the average corner of its largest outline
 const centre=f=>{const c=f.geometry.coordinates, ring=(f.geometry.type==='Polygon'?[c]:c).map(p=>p[0]).sort((a,b)=>b.length-a.length)[0].map(([lng,lat])=>({lat,lng})); return [avg(ring,'lat'),avg(ring,'lng')];};
 
-export default function createWorld({$,fetchJSON,mapFile,imgNode,vidNode,isDesktop}){
+export default function createWorld({$,fetchJSON,mapFile,imgNode,vidNode}){
   const still=matchMedia('(prefers-reduced-motion:reduce)').matches;
   let by=null, g=null, boot=null, active=false, seen=true, sel=null, hover=null, hold=false, timer=0;
 
@@ -168,17 +171,17 @@ export default function createWorld({$,fetchJSON,mapFile,imgNode,vidNode,isDeskt
         .pointOfView(HOME);
     }catch(e){$('worldHint').textContent='3D is not available in this browser. Use the list instead.'; return;}
     const mat=g.globeMaterial(); mat.color.set('#0c1526'); mat.emissive.set('#0a1730'); mat.shininess=6;
-    const ctl=g.controls(); ctl.autoRotateSpeed=.55; ctl.enablePan=false; ctl.minDistance=140; ctl.maxDistance=430;
+    const ctl=g.controls(); ctl.autoRotateSpeed=.55; ctl.enablePan=false; ctl.enableZoom=false;   // no scroll or pinch zoom: the − and + buttons do it
     paint(); spin(); fit(); new ResizeObserver(fit).observe($('globe'));
     const stage=$('globe').parentNode;
     stage.addEventListener('pointerenter',()=>{clearTimeout(timer); hold=true; spin();});
     stage.addEventListener('pointerleave',()=>{timer=setTimeout(()=>{hold=false; spin();},1200);});
     new IntersectionObserver(([e])=>{seen=e.isIntersecting; sync();}).observe(stage);
     $('worldHome').onclick=()=>{select(null); g.pointOfView(HOME,900);};
-    // the − and + buttons step the camera in and out, within the same limits as scrolling or pinching
-    $('worldTools').querySelectorAll('[data-zoom]').forEach(b=>{b.onclick=()=>g.pointOfView({altitude:Math.min(ctl.maxDistance/100-1,Math.max(ctl.minDistance/100-1,g.pointOfView().altitude*b.dataset.zoom))},300);});
+    // the − and + buttons step the camera in and out, between a close-up and the whole globe
+    $('worldTools').querySelectorAll('[data-zoom]').forEach(b=>{b.onclick=()=>g.pointOfView({altitude:Math.min(3.3,Math.max(.4,g.pointOfView().altitude*b.dataset.zoom))},300);});
     $('worldTools').classList.remove('hidden');
-    $('worldHint').textContent=isDesktop?'Drag to spin · scroll to zoom':'Drag to spin · pinch to zoom';
+    $('worldHint').textContent='Drag to spin';
   };
 
   // open(m) shows the globe; open(m,'England') fills the country page with that country's albums
