@@ -2,6 +2,7 @@
 // index.html imports this file the first time World is opened; the styles, the map and the globe library load from here.
 
 const CDN='https://cdn.jsdelivr.net/npm/';
+const V=new URL(import.meta.url).search;      // version tag from index.html, passed on to world.css and uk.json
 const TOTAL=199;                              // 195 countries, with the United Kingdom counted as its four nations, plus Guernsey
 const HOME={lat:46.8,lng:8.2,altitude:1.9};   // starting view and Recenter target: Switzerland
 
@@ -66,7 +67,7 @@ const TEMPLATE=`
 const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const avg=(arr,k)=>arr.reduce((s,a)=>s+a[k],0)/arr.length;
 const loadScript=src=>new Promise((res,rej)=>{const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>rej(Error('Failed to load '+src)); document.head.appendChild(s);});
-const css=new Promise((res,rej)=>{const l=document.createElement('link'); l.rel='stylesheet'; l.href=new URL('world.css',import.meta.url); l.onload=res; l.onerror=()=>rej(Error('Failed to load world.css')); document.head.appendChild(l);});
+const css=new Promise((res,rej)=>{const l=document.createElement('link'); l.rel='stylesheet'; l.href=new URL('world.css'+V,import.meta.url); l.onload=res; l.onerror=()=>rej(Error('Failed to load world.css')); document.head.appendChild(l);});
 // rough centre of a country: the average corner of its largest outline
 const centre=f=>{const c=f.geometry.coordinates, ring=(f.geometry.type==='Polygon'?[c]:c).map(p=>p[0]).sort((a,b)=>b.length-a.length)[0].map(([lng,lat])=>({lat,lng})); return [avg(ring,'lat'),avg(ring,'lng')];};
 
@@ -129,7 +130,7 @@ export default function createWorld({$,fetchJSON,mapFile,imgNode,vidNode,isDeskt
 
   const init=async()=>{
     $('world').innerHTML=TEMPLATE;
-    const [topo,uk]=await Promise.all([fetchJSON(CDN+'world-atlas@2.0.2/countries-110m.json'),fetchJSON(new URL('uk.json',import.meta.url)),
+    const [topo,uk]=await Promise.all([fetchJSON(CDN+'world-atlas@2.0.2/countries-110m.json'),fetchJSON(new URL('uk.json'+V,import.meta.url)),
       loadScript(CDN+'topojson-client@3.1.0/dist/topojson-client.min.js'),loadScript(CDN+'globe.gl@2.46.2/dist/globe.gl.min.js')]);
     // the atlas draws the United Kingdom as one shape; uk.json replaces it with England, Scotland, Wales and Northern Ireland
     const feats=topojson.feature(topo,topo.objects.countries).features.filter(f=>f.properties.name!=='Antarctica'&&f.properties.name!=='United Kingdom').concat(uk.features);

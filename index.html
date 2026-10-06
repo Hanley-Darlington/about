@@ -241,9 +241,12 @@
     el.addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ') return; const fig=e.target.closest('figure.shot'); if(fig&&el.contains(fig)){e.preventDefault(); lightbox.open({type:fig.dataset.type||'image',src:fig.dataset.src,alt:fig.dataset.alt||''});}});
   };
 
-  // World (the globe and its country pages) lives in /world and is only fetched the first time it is opened
+  // World (the globe and its country pages) lives in /world and is only fetched the first time it is opened.
+  // The server is asked which version it has first, so a fresh upload shows straight away instead of the browser's saved copy.
   const world=(()=>{let mod=null, on=false;
-    const load=()=>mod||(mod=import('./world/world.js').then(x=>x.default({$,fetchJSON,mapFile,imgNode,vidNode,isDesktop})));
+    const load=()=>mod||(mod=fetch('./world/world.js',{method:'HEAD',cache:'no-cache'})
+      .then(r=>import('./world/world.js?v='+encodeURIComponent(r.headers.get('etag')||r.headers.get('last-modified')||'')))
+      .then(x=>x.default({$,fetchJSON,mapFile,imgNode,vidNode,isDesktop})));
     return {open:(m,country)=>{on=true; load().then(w=>{if(on) w.open(m,country);}).catch(()=>{mod=null; $('world').textContent='Could not load this page. Check your connection and try again.';});},
       close:()=>{on=false; if(mod) mod.then(w=>w.close()).catch(()=>{});}};
   })();
