@@ -45,42 +45,6 @@
     #streamGrid .shot img,#streamGrid .shot video,#portfolioGrid .shot img,#portfolioGrid .shot video,#albumGrid .shot img,#albumGrid .shot video{width:100%;height:100%;object-fit:cover;background:#000}
     #albumGrid{align-items:start}
 
-    .place{position:relative;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);aspect-ratio:16/9;background:#000}
-    .place img,.place video{width:100%;height:100%;object-fit:cover;display:block;background:#000}
-    .place .overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.65),rgba(0,0,0,.08) 60%);display:flex;flex-direction:column;justify-content:flex-end;padding:20px}
-    .place h4{margin:0 0 6px;font-size:18px}
-    .place p{margin:0 0 10px;font-size:14px;color:var(--muted)}
-    .place a{align-self:start}
-
-    .world{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start}
-    .world-stage{position:relative;height:min(72vh,720px);min-height:380px;-webkit-user-select:none;user-select:none}
-    #globe{position:absolute;inset:0}
-    #globe canvas,#globe canvas+div{-webkit-mask-image:radial-gradient(closest-side,#000 86%,transparent);mask-image:radial-gradient(closest-side,#000 86%,transparent)}
-    #globe canvas:not(.clickable){cursor:grab}
-    #globe canvas:not(.clickable):active{cursor:grabbing}
-    #globe .float-tooltip-kap{z-index:3;padding:8px 12px;border-radius:12px;font:500 13px/1.45 Inter,system-ui,sans-serif;color:var(--text);background:rgba(15,21,36,.94);border:1px solid rgba(255,255,255,.12);box-shadow:var(--shadow)}
-    #globe:has(.g-pin:hover) .float-tooltip-kap{visibility:hidden}
-    .world svg{vertical-align:-2px}
-    .world-hint{position:absolute;inset:auto 0 6px;text-align:center;font-size:13px;color:var(--muted);pointer-events:none}
-    .world-panel{display:grid;gap:16px}
-    .world-card{padding:18px;border-radius:var(--radius);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
-    .world-card p{color:var(--muted);font-size:14px}
-    .world-count{font-size:34px;font-weight:800;line-height:1.1}
-    .world-count small{font-size:14px;font-weight:600;color:var(--muted)}
-    .world-bar{height:6px;margin:12px 0 14px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
-    .world-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--brand),var(--brand-2))}
-    .world-list{display:flex;flex-wrap:wrap;gap:8px}
-    .world-list .chip{font:inherit;font-size:14px;color:inherit;cursor:pointer}
-    .world-list .chip.on{background:linear-gradient(135deg,var(--brand),var(--brand-2));border-color:transparent;color:#0a0a0a;font-weight:700}
-    .world-detail{display:grid;gap:12px}
-    .world-detail h3{display:flex;align-items:center;gap:8px;font-size:20px}
-    .g-pin{width:12px;height:12px;padding:0;border-radius:50%;border:2px solid #fff;background:var(--brand);cursor:pointer;pointer-events:auto;animation:gPulse 2.2s ease-out infinite}
-    .g-pin span{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);padding:4px 9px;border-radius:999px;white-space:nowrap;font:600 12px Inter,system-ui,sans-serif;color:var(--text);background:rgba(15,21,36,.94);border:1px solid rgba(255,255,255,.14);opacity:0;pointer-events:none;transition:opacity .15s}
-    .g-pin:hover span,.g-pin:focus-visible span{opacity:1}
-    @keyframes gPulse{from{box-shadow:0 0 0 0 rgba(124,58,237,.75)}to{box-shadow:0 0 0 12px rgba(124,58,237,0)}}
-    @media(max-width:900px){.world{grid-template-columns:1fr}.world-stage{height:min(92vw,70vh);min-height:0}}
-    @media (prefers-reduced-motion:reduce){.g-pin{animation:none}}
-
     @media (hover:hover) and (pointer:fine){
       .shot{transition:transform .18s ease, box-shadow .18s ease;will-change:transform}
       .shot:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 20px 50px rgba(0,0,0,.6)}
@@ -108,9 +72,9 @@
     @media (prefers-reduced-motion:reduce){.anim-play.zoom-in,.anim-play.zoom-in-up,.anim-play.zoom-in-down,.anim-play.zoom-in-left,.anim-play.zoom-in-right{animation:none}}
 
     @supports not (aspect-ratio:1/1){
-      #streamGrid .shot,#portfolioGrid .shot,#albumGrid .shot,.place{position:relative}
-      #streamGrid .shot::before,#portfolioGrid .shot::before,#albumGrid .shot::before,.place::before{content:"";display:block;padding-top:56.25%}
-      #streamGrid .shot>img,#streamGrid .shot>video,#portfolioGrid .shot>img,#portfolioGrid .shot>video,#albumGrid .shot>img,#albumGrid .shot>video,.place>img,.place>video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+      #streamGrid .shot,#portfolioGrid .shot,#albumGrid .shot{position:relative}
+      #streamGrid .shot::before,#portfolioGrid .shot::before,#albumGrid .shot::before{content:"";display:block;padding-top:56.25%}
+      #streamGrid .shot>img,#streamGrid .shot>video,#portfolioGrid .shot>img,#portfolioGrid .shot>video,#albumGrid .shot>img,#albumGrid .shot>video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
     }
 
     /* ---- Footer pinned & socials centered ---- */
@@ -183,20 +147,21 @@
 
   <section id="view-world" class="hidden">
     <div class="container">
-      <div class="view-head"><h2>World</h2><a class="back" href="#/">← Home</a></div>
-      <div class="world">
-        <div class="world-stage"><div id="globe"></div><p class="world-hint" id="worldHint">Loading…</p></div>
-        <aside class="world-panel hidden" id="worldPanel">
-          <div class="world-card world-detail" id="worldDetail"></div>
-          <div class="world-card"><div class="world-count" id="worldCount"></div><div class="world-bar"><i id="worldBar"></i></div><div class="world-list" id="worldList"></div></div>
-        </aside>
-      </div>
+      <div class="view-head"><a class="back" href="#/" style="margin-left:auto">← Home</a></div>
+      <div id="world"><p style="color:#9aa7bd">Loading…</p></div>
+    </div>
+  </section>
+
+  <section id="view-country" class="hidden">
+    <div class="container">
+      <div class="view-head"><h2 id="countryTitle">Country</h2><a class="back" href="#/world">← World</a></div>
+      <div class="world-albums" id="countryGrid"><p style="color:#9aa7bd">Loading…</p></div>
     </div>
   </section>
 
   <section id="view-album" class="hidden">
     <div class="container">
-      <div class="view-head"><h2 id="albumTitle">Album</h2><a class="back" href="#/world">← World</a></div>
+      <div class="view-head"><h2 id="albumTitle">Album</h2><a class="back" id="albumBack" href="#/world">← World</a></div>
       <div class="gallery" id="albumGrid"><p style="color:#9aa7bd">Loading…</p></div>
       <div id="albumError"></div>
     </div>
@@ -290,109 +255,14 @@
     el.addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ') return; const fig=e.target.closest('figure.shot'); if(fig&&el.contains(fig)){e.preventDefault(); lightbox.open({type:fig.dataset.type||'image',src:fig.dataset.src,alt:fig.dataset.alt||''});}});
   };
 
-  const placeCard=(folder,files,title=folder)=>{const a=document.createElement('article'); a.className='place'; const lead=files[0];
-    a.appendChild(lead.type==='video'?vidNode(lead.src):imgNode(lead.src,title));
-    const ov=document.createElement('div'); ov.className='overlay'; ov.innerHTML='<h4>'+title+'</h4><p>'+files.length+' files</p><a class="chip" href="#/travel/'+encodeURIComponent(folder)+'">View</a>';
-    a.appendChild(ov); return a;
-  };
-
-  // World: 3D globe, loaded on first visit. A country is unlocked once a travel folder maps to it.
-  const world=(()=>{
-    const CDN='https://cdn.jsdelivr.net/npm/', TOTAL=195, still=matchMedia('(prefers-reduced-motion:reduce)').matches;
-    // travel folder (lower-case) -> [country as named in the atlas, pin lat, pin lng, display name]
-    // A folder named exactly after a country needs no entry here. Any other folder is listed, but stays off the globe.
-    const PLACES={
-      australia:['Australia',-25.3,133.8],
-      bali:['Indonesia',-8.4,115.2],
-      bordeaux:['France',44.84,-0.58],
-      dordogne:['France',45.1,0.75],
-      england:['United Kingdom',51.51,-0.12],
-      galapagos:['Ecuador',-0.6,-90.5],
-      greece:['Greece',38.3,23.3],
-      hawaii:['United States of America',20.8,-156.9,'Hawaii'],
-      isle:['United Kingdom',50.69,-1.3,'Isle of Wight'],
-      italy:['Italy',41.9,12.5],
-      'new zealand':['New Zealand',-41.3,173.5],
-      scotland:['United Kingdom',56.8,-4.2],
-      singapore:['Singapore',1.35,103.82],
-      spain:['Spain',40.2,-3.7],
-      switzerland:['Switzerland',46.8,8.2]
-    };
-    const LOCK='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
-    const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-    const loadScript=src=>new Promise((res,rej)=>{const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>rej(Error('Failed to load '+src)); document.head.appendChild(s);});
-    const avg=(arr,k)=>arr.reduce((s,a)=>s+a[k],0)/arr.length;
-    const centre=f=>{const c=f.geometry.coordinates, ring=(f.geometry.type==='Polygon'?[c]:c).map(p=>p[0]).sort((a,b)=>b.length-a.length)[0].map(([lng,lat])=>({lat,lng})); return [avg(ring,'lat'),avg(ring,'lng')];};
-
-    let g=null, boot=null, on=false, sel=null, hover=null, hold=false, timer=0; const unlocked={};
-    const isOpen=f=>!!unlocked[f.properties.name];
-    const spin=()=>{if(g) g.controls().autoRotate=!still&&!hold&&!unlocked[sel];};
-    const fit=()=>{const el=$('globe'); if(g&&el.clientWidth) g.width(el.clientWidth).height(el.clientHeight);};
-    const paint=()=>g
-      .polygonAltitude(f=>isOpen(f)?(f===hover||f.properties.name===sel?.05:.02):.006)
-      .polygonCapColor(f=>isOpen(f)?(f.properties.name===sel?'#a78bfa':f===hover?'#67e8f9':'rgba(34,211,238,.8)'):(f===hover?'rgba(148,163,184,.32)':'rgba(148,163,184,.13)'));
-
-    const select=name=>{
-      sel=name||null; const as=unlocked[sel], d=$('worldDetail'); d.textContent='';
-      [...$('worldList').children].forEach(b=>b.classList.toggle('on',b.textContent===sel));
-      if(!sel) d.innerHTML='<p>Glowing countries are unlocked. Click one to see its photos.</p>';
-      else if(!as) d.innerHTML='<h3>'+LOCK+esc(sel)+'</h3><p>Locked. No photos from here yet.</p>';
-      else{
-        const h=document.createElement('h3'); h.textContent=sel; d.appendChild(h);
-        as.forEach(a=>d.appendChild(placeCard(a.folder,a.files,a.title)));
-        if(g&&as[0].placed) g.pointOfView({lat:avg(as,'lat'),lng:avg(as,'lng'),altitude:1.25},900);
-        if(matchMedia('(max-width:900px)').matches) d.scrollIntoView({behavior:'smooth',block:'nearest'});
-      }
-      if(g) paint(); spin();
-    };
-
-    const pin=a=>{const b=document.createElement('button'); b.type='button'; b.className='g-pin'; b.setAttribute('aria-label',a.title);
-      b.innerHTML='<span>'+esc(a.title)+' · '+a.files.length+' files</span>'; b.onclick=()=>{location.hash='#/travel/'+encodeURIComponent(a.folder);}; return b;};
-
-    const init=async m=>{
-      const [topo]=await Promise.all([fetchJSON(CDN+'world-atlas@2.0.2/countries-110m.json'),loadScript(CDN+'topojson-client@3.1.0/dist/topojson-client.min.js'),loadScript(CDN+'globe.gl@2.46.2/dist/globe.gl.min.js')]);
-      const feats=topojson.feature(topo,topo.objects.countries).features.filter(f=>f.properties.name!=='Antarctica');
-      const byName=Object.fromEntries(feats.map(f=>[f.properties.name.toLowerCase(),f]));
-      const albums=Object.entries(m.travels).map(([folder,paths])=>{const k=folder.toLowerCase(), f=byName[k], p=PLACES[k]||(f?[f.properties.name,...centre(f)]:[folder]);
-        return {folder,country:p[0],lat:p[1],lng:p[2],title:p[3]||folder,placed:p.length>1,files:paths.map(mapFile)};});
-      albums.forEach(a=>(unlocked[a.country]||(unlocked[a.country]=[])).push(a));
-
-      const names=Object.keys(unlocked).sort(), count=names.filter(n=>unlocked[n][0].placed).length;
-      $('worldCount').innerHTML=count+' <small>of '+TOTAL+' countries unlocked</small>';
-      $('worldBar').style.width=(count/TOTAL*100)+'%';
-      names.forEach(n=>{const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=n; b.onclick=()=>select(n===sel?null:n); $('worldList').appendChild(b);});
-      $('worldPanel').classList.remove('hidden'); select(null);
-
-      try{
-        g=new Globe($('globe'))
-          .backgroundColor('rgba(0,0,0,0)').atmosphereColor('#22d3ee').atmosphereAltitude(.17).showGraticules(true)
-          .polygonsData(feats).polygonsTransitionDuration(250)
-          .polygonSideColor(f=>isOpen(f)?'rgba(34,211,238,.28)':'rgba(0,0,0,0)')
-          .polygonStrokeColor(f=>isOpen(f)?'#cffafe':'rgba(148,163,184,.3)')
-          .polygonLabel(f=>{const n=f.properties.name, as=unlocked[n]; return '<b>'+esc(n)+'</b><br>'+(as?as.length+(as.length>1?' albums':' album')+' · click to open':LOCK+' Locked');})
-          .onPolygonHover(f=>{hover=f; paint();})
-          .onPolygonClick(f=>select(f.properties.name))
-          .onGlobeClick(()=>select(null))
-          .showPointerCursor((type,d)=>type==='polygon'&&isOpen(d))
-          .htmlElementsData(albums.filter(a=>a.placed)).htmlElement(pin).htmlAltitude(.03)
-          .pointOfView({lat:28,lng:8,altitude:1.9});
-      }catch(e){$('worldHint').textContent='3D is not available in this browser. Use the list instead.'; return;}
-      const mat=g.globeMaterial(); mat.color.set('#0c1526'); mat.emissive.set('#0a1730'); mat.shininess=6;
-      const c=g.controls(); c.autoRotateSpeed=.55; c.enablePan=false; c.minDistance=140; c.maxDistance=430;
-      paint(); spin(); fit(); new ResizeObserver(fit).observe($('globe'));
-      const stage=$('globe').parentNode;
-      stage.addEventListener('pointerenter',()=>{clearTimeout(timer); hold=true; spin();});
-      stage.addEventListener('pointerleave',()=>{timer=setTimeout(()=>{hold=false; spin();},1200);});
-      $('worldHint').textContent=isDesktop?'Drag to spin · scroll to zoom':'Drag to spin · pinch to zoom';
-    };
-
-    const open=m=>{on=true; (boot||(boot=init(m))).then(()=>{if(!g) return; if(on){fit(); g.resumeAnimation();} else g.pauseAnimation();})
-      .catch(()=>{boot=null; $('worldHint').textContent='Could not load the globe. Check your connection and try again.';});};
-    const close=()=>{on=false; if(g) g.pauseAnimation();};
-    return {open,close};
+  // World (the globe and its country pages) lives in /world and is only fetched the first time it is opened
+  const world=(()=>{let mod=null, on=false;
+    const load=()=>mod||(mod=import('./world/world.js').then(x=>x.default({$,fetchJSON,mapFile,imgNode,vidNode,isDesktop})));
+    return {open:(m,country)=>{on=true; load().then(w=>{if(on) w.open(m,country);}).catch(()=>{mod=null; $('world').textContent='Could not load this page. Check your connection and try again.';});},
+      close:()=>{on=false; if(mod) mod.then(w=>w.close()).catch(()=>{});}};
   })();
 
-  const views={home:$('view-home'),portfolio:$('view-portfolio'),films:$('view-films'),world:$('view-world'),album:$('view-album')};
+  const views={home:$('view-home'),portfolio:$('view-portfolio'),films:$('view-films'),world:$('view-world'),country:$('view-country'),album:$('view-album')};
   const show=v=>{Object.values(views).forEach(x=>x.classList.add('hidden')); views[v].classList.remove('hidden'); scrollTo(0,0);};
 
   let homeScrollHandler=null, animOn=false; const ROW=250, COL=100;
@@ -405,13 +275,16 @@
   };
   const uninstallHomeToggle=g=>{if(homeScrollHandler){removeEventListener('scroll',homeScrollHandler); homeScrollHandler=null;} $('homeSpacer').style.display='none'; if(g){g.classList.add('is-on'); g.querySelectorAll('.anim-wrap').forEach(w=>w.classList.remove('anim-play'));} animOn=false;};
 
+  let last='';
   const route=(m)=>{
-    const h=(location.hash||'').slice(1); world.close();
+    const h=(location.hash||'').slice(1), from=last; last=h; world.close();
     if(h.startsWith('/portfolio')){uninstallHomeToggle(); show('portfolio'); mountGrid($('portfolioGrid'),listPortfolio(m)); bindLightbox($('portfolioGrid')); return;}
     if(h.startsWith('/travels')){location.replace('#/world'); return;}
     if(h.startsWith('/films')){uninstallHomeToggle(); show('films'); return;}
-    if(h.startsWith('/world')){uninstallHomeToggle(); show('world'); world.open(m); return;}
-    if(h.startsWith('/travel/')){uninstallHomeToggle(); const folder=decodeURIComponent(h.split('/')[2]); show('album'); $('albumTitle').textContent=folder; mountGrid($('albumGrid'),listAlbum(m,folder)); bindLightbox($('albumGrid')); return;}
+    if(h.startsWith('/world')){uninstallHomeToggle(); const country=decodeURIComponent(h.split('/')[2]||''); show(country?'country':'world'); world.open(m,country); return;}
+    if(h.startsWith('/travel/')){uninstallHomeToggle(); const folder=decodeURIComponent(h.split('/')[2]); show('album'); $('albumTitle').textContent=folder;
+      const country=from.startsWith('/world/')?decodeURIComponent(from.split('/')[2]):'', back=$('albumBack'); back.href=country?'#'+from:'#/world'; back.textContent='← '+(country||'World');
+      mountGrid($('albumGrid'),listAlbum(m,folder)); bindLightbox($('albumGrid')); return;}
     // HOME
     show('home'); uninstallHomeToggle();
     homeFiles().then(files=>{const grid=$('streamGrid'); mountHome(grid,files); bindLightbox(grid); installHomeToggle(grid);});
