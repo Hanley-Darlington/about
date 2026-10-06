@@ -46,7 +46,7 @@
     #albumGrid{align-items:start}
 
     @media (hover:hover) and (pointer:fine){
-      .shot{transition:transform .18s ease, box-shadow .18s ease;will-change:transform}
+      .shot{transition:transform .18s ease, box-shadow .18s ease}
       .shot:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 20px 50px rgba(0,0,0,.6)}
       .shot:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
       #streamGrid{display:none} #streamGrid.is-on{display:grid}
@@ -134,7 +134,6 @@
     <div class="container">
       <div class="view-head"><h2>Portfolio</h2><a class="back" href="#/">← Home</a></div>
       <div class="gallery" id="portfolioGrid"><p style="color:#9aa7bd">Loading…</p></div>
-      <div id="portfolioError"></div>
     </div>
   </section>
 
@@ -163,7 +162,6 @@
     <div class="container">
       <div class="view-head"><h2 id="albumTitle">Album</h2><a class="back" id="albumBack" href="#/world">← World</a></div>
       <div class="gallery" id="albumGrid"><p style="color:#9aa7bd">Loading…</p></div>
-      <div id="albumError"></div>
     </div>
   </section>
 </main>
@@ -193,11 +191,12 @@
 
   const fetchJSON=(u,h)=>fetch(u,h).then(r=>{if(!r.ok) throw Error('HTTP '+r.status); return r.json();});
   const buildManifest=t=>{
-    const m={portfolio:[],travels:{}};
+    const m={portfolio:[],travels:{},homepage:[]};
     (t.tree||[]).forEach(x=>{
       const p=x.path; if(x.type!=='blob'||!(wExt(p)||mExt(p))) return;
       if(p.startsWith('portfolio/')) m.portfolio.push(p);
       else if(p.startsWith('travels/')){const f=decodeURIComponent(p.split('/')[1]); (m.travels[f]||(m.travels[f]=[])).push(p);}
+      else if(p.startsWith('homepage/')) m.homepage.push(p);
     });
     return m;
   };
@@ -211,23 +210,10 @@
   const listPortfolio=m=>m.portfolio.map(mapFile);
   const listAlbum=(m,f)=>(m.travels[f]||[]).map(mapFile);
 
-  // iPhone-safe homepage slot probe: WebP first, then MP4, each with timeout
-  const probeHome=i=>new Promise(res=>{
-    const webp='/homepage/'+i+'.webp', mp4='/homepage/'+i+'.mp4'; let done=false; const finish=v=>{ if(!done){done=true; res(v);} };
-    const im=new Image(), t1=setTimeout(()=>{im.onload=im.onerror=null; tryVid();},1800);
-    im.onload=()=>{clearTimeout(t1); finish({type:'image',src:webp,alt:'home-'+i});};
-    im.onerror=()=>{clearTimeout(t1); tryVid();};
-    im.src=webp;
-    function tryVid(){ if(done) return; const v=document.createElement('video'); v.preload='metadata';
-      v.muted=true; v.setAttribute('muted',''); v.playsInline=true; v.setAttribute('playsinline','');
-      const t2=setTimeout(()=>{cleanup(); finish(null);},2000);
-      const ok=()=>{clearTimeout(t2); cleanup(); finish({type:'video',src:mp4,alt:'home-'+i});};
-      const fail=()=>{clearTimeout(t2); cleanup(); finish(null);};
-      const cleanup=()=>{v.onloadedmetadata=v.onerror=null; v.removeAttribute('src'); try{v.load();}catch{}};
-      v.onloadedmetadata=ok; v.onerror=fail; v.src=mp4;
-    }
-  });
-  const homeFiles=()=>Promise.all([...Array(12)].map((_,i)=>probeHome(i+1))).then(a=>a.filter(Boolean));
+  // homepage tiles are the numbered files in /homepage (3.mp4 fills slot 3); a WebP wins if a number has both
+  const homeFiles=m=>{const slots={};
+    m.homepage.forEach(p=>{const n=(p.match(/^homepage\/(\d+)\.(?:webp|mp4)$/i)||[])[1]; if(n&&(!slots[n]||wExt(p))) slots[n]={type:mExt(p)?'video':'image',src:'/'+p,alt:'home-'+n};});
+    return Object.keys(slots).sort((a,b)=>a-b).map(n=>slots[n]);};
 
   const lightbox=(()=>{const el=$('lightbox');
     const open=f=>{el.innerHTML='<button class="close" aria-label="Close">✕</button>'; el.appendChild(f.type==='video'?Object.assign(vidNode(f.src),{controls:true}):imgNode(f.src,f.alt||'')); el.classList.add('open');};
@@ -245,7 +231,7 @@
   const mountHome=(el,files)=>{el.textContent=''; const anim=['zoom-in-right','zoom-in-down','zoom-in-down','zoom-in-left','zoom-in-right','zoom-in','zoom-in','zoom-in-left','zoom-in-right','zoom-in-up','zoom-in-up','zoom-in-left'];
     files.forEach((f,i)=>{const wrap=document.createElement('div'); wrap.className='anim-wrap '+anim[i%anim.length];
       const fig=document.createElement('figure'); fig.className='shot'; fig.tabIndex=0; fig.dataset.type=f.type; fig.dataset.src=f.src; fig.dataset.alt=f.alt||'';
-      fig.appendChild(f.type==='video'?vidNode(f.src):imgNode(f.src,f.alt)); wrap.appendChild(fig); el.appendChild(wrap);
+      fig.appendChild(f.type==='video'?vidNode(f.src):Object.assign(imgNode(f.src,f.alt),{loading:'eager'})); wrap.appendChild(fig); el.appendChild(wrap);
     });
   };
 
@@ -287,7 +273,7 @@
       mountGrid($('albumGrid'),listAlbum(m,folder)); bindLightbox($('albumGrid')); return;}
     // HOME
     show('home'); uninstallHomeToggle();
-    homeFiles().then(files=>{const grid=$('streamGrid'); mountHome(grid,files); bindLightbox(grid); installHomeToggle(grid);});
+    const grid=$('streamGrid'); mountHome(grid,homeFiles(m)); bindLightbox(grid); installHomeToggle(grid);
   };
 
   loadManifest().then(m=>{
