@@ -29,13 +29,10 @@
     @media (max-width:560px){.nav{justify-content:center;padding:10px 14px}.nav-links{gap:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.nav-links::-webkit-scrollbar{display:none}.chip,.pill{padding:8px 12px;font-size:14px}}
 
     section{padding:24px 0 52px}
-    .hero{display:grid;grid-template-columns:1fr 1fr;padding:64px 0;gap:32px;align-items:center}
+    .hero{display:grid;grid-template-columns:1fr;padding:64px 0;gap:32px;align-items:center}
     @media(max-width:900px){.hero{grid-template-columns:1fr;text-align:center}}
     .hero h1{font-size:clamp(32px,5vw,56px);font-weight:800;line-height:1.1;margin-bottom:10px}
     .hero p{color:var(--muted)}
-    .hero-card{border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;justify-self:end;max-width:min(520px,90vw)}
-    @media(max-width:900px){.hero-card{justify-self:center}}
-    .hero-card img{width:100%;height:auto;object-fit:cover}
 
     .hidden{display:none}
     .view-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
@@ -134,7 +131,7 @@
 <main>
   <section id="view-home">
     <div class="container">
-      <div class="hero"><div><h1>William Darlington</h1><p>Vires in Numeris</p><p>All Visuals are Authentic</p></div><div class="hero-card"><img id="heroImg" alt="Profile"></div></div>
+      <div class="hero"><div><h1>William Darlington</h1><p>Vires in Numeris</p><p>All Visuals are Authentic</p></div></div>
       <div class="home-spacer" id="homeSpacer" aria-hidden="true"></div>
       <div class="gallery" id="streamGrid"></div>
     </div>
@@ -185,18 +182,16 @@
   const $=id=>document.getElementById(id);
   const raw=p=>'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(p)+'?v='+Date.now();
   const wExt=p=>/\.webp$/i.test(p), mExt=p=>/\.mp4$/i.test(p);
-  const heroSrc=m=>{const pics=m.profile.filter(wExt); const s=pics.find(p=>p.toLowerCase().replace(/\.[^.]+$/,'').endsWith('star')); return raw(s||pics[0]||'user.png');};
   const imgNode=(src,alt='')=>Object.assign(new Image(),{src,alt,loading:'lazy'});
   const vidNode=src=>{const v=document.createElement('video'); Object.assign(v,{src,loop:true,autoplay:true,controls:false}); v.muted=true; v.setAttribute('muted',''); v.playsInline=true; v.setAttribute('playsinline',''); return v;};
 
   const fetchJSON=(u,h)=>fetch(u,h).then(r=>{if(!r.ok) throw Error('HTTP '+r.status); return r.json();});
   const buildManifest=t=>{
-    const m={portfolio:[],travels:{},profile:[]};
+    const m={portfolio:[],travels:{}};
     (t.tree||[]).forEach(x=>{
       const p=x.path; if(x.type!=='blob'||!(wExt(p)||mExt(p))) return;
       if(p.startsWith('portfolio/')) m.portfolio.push(p);
       else if(p.startsWith('travels/')){const f=decodeURIComponent(p.split('/')[1]); (m.travels[f]||(m.travels[f]=[])).push(p);}
-      else if(p.startsWith('profile/')) m.profile.push(p);
     });
     return m;
   };
@@ -286,7 +281,6 @@
   };
 
   loadManifest().then(m=>{
-    $('heroImg').src=heroSrc(m);
     route(m);
     addEventListener('hashchange',()=>route(m));
   });
