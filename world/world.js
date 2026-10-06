@@ -50,7 +50,12 @@ const TEMPLATE=`
   <div class="world">
     <div class="world-stage">
       <div id="globe"></div>
-      <p class="world-hint"><span id="worldHint">Loading…</span><button class="chip hidden" id="worldHome" type="button">Recenter</button></p>
+      <p class="world-hint" id="worldHint">Loading…</p>
+      <div class="world-tools hidden" id="worldTools">
+        <button class="chip" type="button" data-zoom="1.45" aria-label="Zoom out">−</button>
+        <button class="chip" type="button" id="worldHome">Recenter</button>
+        <button class="chip" type="button" data-zoom="0.69" aria-label="Zoom in">+</button>
+      </div>
     </div>
     <aside class="world-panel hidden" id="worldPanel">
       <div class="world-card world-detail" id="worldDetail"></div>
@@ -169,7 +174,9 @@ export default function createWorld({$,fetchJSON,mapFile,imgNode,vidNode,isDeskt
     stage.addEventListener('pointerleave',()=>{timer=setTimeout(()=>{hold=false; spin();},1200);});
     new IntersectionObserver(([e])=>{seen=e.isIntersecting; sync();}).observe(stage);
     $('worldHome').onclick=()=>{select(null); g.pointOfView(HOME,900);};
-    $('worldHome').classList.remove('hidden');
+    // the − and + buttons step the camera in and out, within the same limits as scrolling or pinching
+    $('worldTools').querySelectorAll('[data-zoom]').forEach(b=>{b.onclick=()=>g.pointOfView({altitude:Math.min(ctl.maxDistance/100-1,Math.max(ctl.minDistance/100-1,g.pointOfView().altitude*b.dataset.zoom))},300);});
+    $('worldTools').classList.remove('hidden');
     $('worldHint').textContent=isDesktop?'Drag to spin · scroll to zoom':'Drag to spin · pinch to zoom';
   };
 
