@@ -7,8 +7,9 @@ const TOTAL=199;                              // 195 countries, with the United 
 const HOME={lat:46.8,lng:8.2,altitude:1.9};   // starting view and Recenter target: Switzerland
 
 // Everywhere visited: name (lower-case) -> [country, pin lat, pin lng, display name]
-// A line here unlocks its country straight away. Once a travels folder with the same name holds photos, it becomes an album.
-// A travels folder named exactly after a country works without a line; any other folder without one is listed, but stays off the globe.
+// A line here unlocks its country straight away. Once a Pictures folder with the same name holds photos, it becomes an album.
+// That folder can sit inside another (Pictures/England/London): the outer folder then decides the country, and the line only places the pin.
+// A Pictures folder named exactly after a country works without a line; any other folder without one is listed, but stays off the globe.
 const PLACES={
   australia:['Australia',-25.3,133.8],
   austria:['Austria',47.6,14.1],
@@ -18,7 +19,6 @@ const PLACES={
   bosnia:['Bosnia',44,17.8],
   croatia:['Croatia',45.1,15.2],
   dubai:['United Arab Emirates',25.2,55.27,'Dubai'],
-  england:['England',51.51,-0.12],
   galapagos:['Ecuador',-0.6,-90.5],
   germany:['Germany',51.1,10.4],
   greece:['Greece',38.3,23.3],
@@ -28,6 +28,7 @@ const PLACES={
   'isle of wight':['England',50.69,-1.3],
   italy:['Italy',41.9,12.5],
   la:['United States of America',34.05,-118.24,'LA'],
+  london:['England',51.51,-0.12],
   maldives:['Maldives',3.2,73.2],
   'new zealand':['New Zealand',-41.3,173.5],
   norway:['Norway',61.5,9],
@@ -78,25 +79,28 @@ export default function createWorld({$,fetchJSON,mapFile,imgNode,vidNode}){
   const still=matchMedia('(prefers-reduced-motion:reduce)').matches;
   let by=null, g=null, boot=null, active=false, seen=true, sel=null, hover=null, hold=false, timer=0;
 
-  // places grouped by country, keyed by the lower-cased country name; a place whose travels folder has files is an album
+  // places grouped by country, keyed by the lower-cased country name; a place whose Pictures folder has files is an album
   const groups=m=>{if(by) return by; by={};
-    const folders=Object.fromEntries(Object.keys(m.travels).map(f=>[f.toLowerCase(),f]));
-    const add=(folder,p)=>{const k=p[0].toLowerCase(), c=by[k]||(by[k]={name:p[0],places:[]});
-      c.places.push({folder,title:p[3]||folder||p[0],lat:p[1],lng:p[2],files:(m.travels[folder]||[]).map(mapFile)});};
-    Object.entries(PLACES).forEach(([k,p])=>add(folders[k],p));
-    Object.entries(folders).forEach(([k,f])=>{if(!PLACES[k]) add(f,[f]);});
+    const has={};
+    const add=(name,p,folder,leaf)=>{const k=name.toLowerCase(), c=by[k]||(by[k]={name,places:[]});
+      c.places.push({folder,title:p[3]||leaf||p[0],lat:p[1],lng:p[2],files:(m.pictures[folder]||[]).map(mapFile)});};
+    // every folder is a place, looked up by its own name; its country comes from the outermost folder it sits in
+    Object.keys(m.pictures).forEach(folder=>{const path=folder.split('/'), leaf=path.pop(), top=path[0]||leaf, k=leaf.toLowerCase();
+      has[k]=true; add((PLACES[top.toLowerCase()]||[top])[0],PLACES[k]||[],folder,leaf);});
+    Object.entries(PLACES).forEach(([k,p])=>{if(!has[k]) add(p[0],p);});
     Object.values(by).forEach(c=>{c.albums=c.places.filter(a=>a.files.length);});
     return by;};
   const country=name=>by[String(name||'').toLowerCase()];
   const isOpen=f=>!!country(f.properties.name);
 
-  // One picture per country: a single album opens directly, several open the country's own page.
+  const nAlbums=n=>n+(n>1?' albums':' album');
+  // One picture per country: a single album opens directly; several, or one kept in a folder inside the country's, open the country's own page.
   const card=(href,lead,title,sub)=>{const a=document.createElement('a'); a.className='place'; a.href=href;
     a.appendChild(lead.type==='video'?vidNode(lead.src):imgNode(lead.src,title));
     const ov=document.createElement('div'); ov.className='overlay'; ov.innerHTML='<h4>'+esc(title)+'</h4><p>'+esc(sub)+'</p><span class="chip">View</span>';
     a.appendChild(ov); return a;};
-  const albumCard=a=>card('#/travel/'+encodeURIComponent(a.folder),a.files[0],a.title,a.files.length+' files');
-  const countryCard=c=>c.albums.length>1?card('#/world/'+encodeURIComponent(c.name),c.albums[0].files[0],c.albums.length+' albums',c.albums.map(a=>a.title).join(' · ')):albumCard(c.albums[0]);
+  const albumCard=a=>card('#/travel/'+encodeURI(a.folder),a.files[0],a.title,a.files.length+' files');
+  const countryCard=c=>c.albums.length>1||c.albums[0].folder.includes('/')?card('#/world/'+encodeURIComponent(c.name),c.albums[0].files[0],nAlbums(c.albums.length),c.albums.map(a=>a.title).join(' · ')):albumCard(c.albums[0]);
 
   const showCountry=name=>{const c=country(name), grid=$('countryGrid'); $('countryTitle').textContent=c?c.name:name; grid.textContent='';
     if(c&&c.albums.length) c.albums.forEach(a=>grid.appendChild(albumCard(a)));
@@ -129,7 +133,7 @@ export default function createWorld({$,fetchJSON,mapFile,imgNode,vidNode}){
   // a solid pin opens its album; a hollow one marks a place whose photos are not up yet
   const pin=a=>{const b=document.createElement('button'), n=a.files.length; b.type='button'; b.className=n?'g-pin':'g-pin soon'; b.setAttribute('aria-label',a.title);
     b.innerHTML='<span>'+esc(a.title)+(n?' · '+n+' files':'')+'</span>';
-    b.onclick=()=>{if(n) location.hash='#/travel/'+encodeURIComponent(a.folder); else select(a.country,a);}; return b;};
+    b.onclick=()=>{if(n) location.hash='#/travel/'+encodeURI(a.folder); else select(a.country,a);}; return b;};
 
   const init=async()=>{
     $('world').innerHTML=TEMPLATE;
@@ -162,7 +166,7 @@ export default function createWorld({$,fetchJSON,mapFile,imgNode,vidNode}){
         .polygonsData(feats).polygonsTransitionDuration(250)
         .polygonSideColor(f=>isOpen(f)?'rgba(34,211,238,.28)':'rgba(0,0,0,0)')
         .polygonStrokeColor(f=>isOpen(f)?'#cffafe':'rgba(148,163,184,.3)')
-        .polygonLabel(f=>{const n=f.properties.name, c=country(n), k=c&&c.albums.length; return '<b>'+esc(n)+'</b><br>'+(k?k+(k>1?' albums':' album')+' · click to open':c?'Photos coming soon':LOCK+' Locked');})
+        .polygonLabel(f=>{const n=f.properties.name, c=country(n), k=c&&c.albums.length; return '<b>'+esc(n)+'</b><br>'+(k?nAlbums(k)+' · click to open':c?'Photos coming soon':LOCK+' Locked');})
         .onPolygonHover(f=>{hover=f; paint();})
         .onPolygonClick((f,e,at)=>select(f.properties.name,at))
         .onGlobeClick(()=>select(null))
