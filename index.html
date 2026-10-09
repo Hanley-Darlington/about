@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
   <style>
-    :root{--bg:#0b0e14;--muted:#94a3b8;--text:#e8eefc;--brand:#7c3aed;--brand-2:#22d3ee;--ring:rgba(124,58,237,.4);--shadow:0 14px 40px rgba(0,0,0,.5);--radius:20px;--home-spacer:400px}
+    :root{--bg:#0b0e14;--muted:#94a3b8;--text:#e8eefc;--brand:#7c3aed;--brand-2:#22d3ee;--ring:rgba(124,58,237,.4);--shadow:0 14px 40px rgba(0,0,0,.5);--radius:20px}
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--text);line-height:1.55;background:
       radial-gradient(1200px 500px at 120% -10%, rgba(34,211,238,.08), transparent 60%),
@@ -60,8 +60,6 @@
       .shot{transition:transform .18s ease, box-shadow .18s ease}
       .shot:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 20px 50px rgba(0,0,0,.6)}
       .shot:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
-      #streamGrid{display:none} #streamGrid.is-on{display:grid}
-      .home-spacer{display:block;height:var(--home-spacer)}
     }
 
     .lightbox{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.82);padding:20px}
@@ -69,7 +67,8 @@
     .lightbox img,.lightbox video{max-width:min(1200px,95vw);max-height:90vh;border-radius:16px;box-shadow:var(--shadow);background:#000}
     .lightbox .close{position:absolute;top:14px;right:14px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);color:#fff;cursor:pointer}
 
-    .anim-wrap{display:block;will-change:transform,opacity}
+    .anim-wrap{display:block;opacity:0;will-change:transform,opacity}
+    .anim-play{opacity:1}
     .anim-play.zoom-in{animation:zin 1.2s ease-out both}
     .anim-play.zoom-in-up{animation:zinUp 1.2s ease-out both}
     .anim-play.zoom-in-down{animation:zinDown 1.2s ease-out both}
@@ -136,7 +135,6 @@
   <section id="view-home">
     <div class="container">
       <div class="hero"><div><h1>William Darlington</h1><p>Vires in Numeris</p><p>All Visuals are Authentic</p></div></div>
-      <div class="home-spacer" id="homeSpacer" aria-hidden="true"></div>
       <div class="gallery" id="streamGrid"></div>
     </div>
   </section>
@@ -193,7 +191,6 @@
 <script>
 (()=>{'use strict';
   const GH={owner:'Hanley-Darlington',repo:'about',ref:'main'};
-  const isDesktop=matchMedia('(hover:hover) and (pointer:fine)').matches;
   const $=id=>document.getElementById(id);
   const raw=p=>'https://raw.githubusercontent.com/'+GH.owner+'/'+GH.repo+'/'+GH.ref+'/'+encodeURI(p)+'?v='+Date.now();
   const wExt=p=>/\.webp$/i.test(p), mExt=p=>/\.mp4$/i.test(p);
@@ -240,22 +237,28 @@
       fig.appendChild(f.type==='video'?vidNode(f.src):imgNode(f.src,f.alt)); el.appendChild(fig);
     });
   };
-  const mountHome=(el,files)=>{el.textContent=''; const anim=['zoom-in-right','zoom-in-down','zoom-in-down','zoom-in-left','zoom-in-right','zoom-in','zoom-in','zoom-in-left','zoom-in-right','zoom-in-up','zoom-in-up','zoom-in-left'];
+  // Home tiles come in one after another, row by row, as soon as the page opens.
+  // A tile whose picture has not arrived by its turn waits for it, so none shows up empty, but never longer than 2 seconds.
+  const mountHome=(el,files)=>{el.textContent=''; const t0=performance.now(), ROW=250, COL=100, anim=['zoom-in-right','zoom-in-down','zoom-in-down','zoom-in-left','zoom-in-right','zoom-in','zoom-in','zoom-in-left','zoom-in-right','zoom-in-up','zoom-in-up','zoom-in-left'];
     files.forEach((f,i)=>{const wrap=document.createElement('div'); wrap.className='anim-wrap '+anim[i%anim.length];
       const fig=document.createElement('figure'); fig.className='shot'; fig.tabIndex=0; fig.dataset.type=f.type; fig.dataset.src=f.src; fig.dataset.alt=f.alt||'';
-      fig.appendChild(f.type==='video'?vidNode(f.src):Object.assign(imgNode(f.src,f.alt),{loading:'eager'})); wrap.appendChild(fig); el.appendChild(wrap);
+      const media=f.type==='video'?vidNode(f.src):Object.assign(imgNode(f.src,f.alt),{loading:'eager'});
+      const play=()=>{if(wrap.classList.contains('anim-play')) return; wrap.style.animationDelay=Math.max(0,~~(i/4)*ROW+(i%4)*COL-(performance.now()-t0))+'ms'; wrap.classList.add('anim-play');};
+      media.addEventListener(f.type==='video'?'loadeddata':'load',play); media.addEventListener('error',play); setTimeout(play,2000);
+      fig.appendChild(media); wrap.appendChild(fig); el.appendChild(wrap);
     });
   };
 
   // Films: every folder in /Films is one film, with the film itself on the left and the pictures in its folder, its production stills, on the right.
   // A line here puts a film in its place: folder name -> the number in its vimeo.com link. Until then the page keeps a space for it.
+  // Folder names only show as titles once there is more than one film to tell apart.
   const FILMS={};
   const mountFilms=(el,m)=>{el.textContent='';
     const box=(cls,text)=>Object.assign(document.createElement('div'),{className:cls,textContent:text});
     const names=[...new Set(Object.keys(FILMS).concat(Object.keys(m.films)))];
     (names.length?names:['']).forEach(name=>{
       const film=document.createElement('article'), movie=box('film-movie','Film coming soon'), album=box('film-album','Production stills coming soon');
-      film.className='film'; if(name) film.appendChild(Object.assign(document.createElement('h3'),{textContent:name}));
+      film.className='film'; if(names.length>1) film.appendChild(Object.assign(document.createElement('h3'),{textContent:name}));
       if(FILMS[name]) movie.replaceChildren(Object.assign(document.createElement('iframe'),{src:'https://player.vimeo.com/video/'+FILMS[name]+'?dnt=1',title:name,allow:'fullscreen; picture-in-picture',loading:'lazy'}));
       if(m.films[name]){const stills=box('gallery film-stills',''); mountGrid(stills,m.films[name].map(mapFile)); album.replaceChildren(stills);}
       film.append(movie,album); el.appendChild(film);
@@ -281,29 +284,19 @@
   const views={home:$('view-home'),portfolio:$('view-portfolio'),films:$('view-films'),world:$('view-world'),country:$('view-country'),album:$('view-album')};
   const show=v=>{Object.values(views).forEach(x=>x.classList.add('hidden')); views[v].classList.remove('hidden'); scrollTo(0,0);};
 
-  let homeScrollHandler=null, animOn=false; const ROW=250, COL=100;
-  const atBottom=()=>innerHeight+scrollY>=document.documentElement.scrollHeight-120;
-  const enableHome=g=>{if(animOn) return; $('homeSpacer').style.display='none'; g.classList.add('is-on'); g.querySelectorAll('.anim-wrap').forEach((w,i)=>{w.classList.remove('anim-play'); void w.offsetWidth; w.style.animationDelay=(~~(i/4)*ROW+(i%4)*COL)+'ms'; w.classList.add('anim-play');}); animOn=true;};
-  const disableHome=g=>{const s=$('homeSpacer'); if(s) s.style.display=''; g.classList.remove('is-on'); if(!animOn) return; g.querySelectorAll('.anim-wrap').forEach(w=>{w.classList.remove('anim-play'); w.style.animationDelay='';}); animOn=false;};
-  const installHomeToggle=g=>{if(!isDesktop){$('homeSpacer').style.display='none'; g.classList.add('is-on'); return;}
-    disableHome(g); const onScroll=()=>atBottom()?enableHome(g):disableHome(g);
-    homeScrollHandler=onScroll; addEventListener('scroll',onScroll,{passive:true}); onScroll();
-  };
-  const uninstallHomeToggle=g=>{if(homeScrollHandler){removeEventListener('scroll',homeScrollHandler); homeScrollHandler=null;} $('homeSpacer').style.display='none'; if(g){g.classList.add('is-on'); g.querySelectorAll('.anim-wrap').forEach(w=>w.classList.remove('anim-play'));} animOn=false;};
-
   let last='';
   const route=(m)=>{
     const h=(location.hash||'').slice(1), from=last; last=h; world.close();
-    if(h.startsWith('/portfolio')){uninstallHomeToggle(); show('portfolio'); mountGrid($('portfolioGrid'),listPortfolio(m)); bindLightbox($('portfolioGrid')); return;}
+    if(h.startsWith('/portfolio')){show('portfolio'); mountGrid($('portfolioGrid'),listPortfolio(m)); bindLightbox($('portfolioGrid')); return;}
     if(h.startsWith('/travels')){location.replace('#/world'); return;}
-    if(h.startsWith('/films')){uninstallHomeToggle(); show('films'); mountFilms($('films'),m); bindLightbox($('films')); return;}
-    if(h.startsWith('/world')){uninstallHomeToggle(); const country=decodeURIComponent(h.split('/')[2]||''); show(country?'country':'world'); world.open(m,country); return;}
-    if(h.startsWith('/travel/')){uninstallHomeToggle(); const folder=decodeURIComponent(h.slice('/travel/'.length)); show('album'); $('albumTitle').textContent=folder.split('/').pop();
+    if(h.startsWith('/films')){show('films'); mountFilms($('films'),m); bindLightbox($('films')); return;}
+    if(h.startsWith('/world')){const country=decodeURIComponent(h.split('/')[2]||''); show(country?'country':'world'); world.open(m,country); return;}
+    if(h.startsWith('/travel/')){const folder=decodeURIComponent(h.slice('/travel/'.length)); show('album'); $('albumTitle').textContent=folder.split('/').pop();
       const country=from.startsWith('/world/')?decodeURIComponent(from.split('/')[2]):'', back=$('albumBack'); back.href=country?'#'+from:'#/world'; back.textContent='← '+(country||'World');
       mountGrid($('albumGrid'),listAlbum(m,folder)); bindLightbox($('albumGrid')); return;}
     // HOME
-    show('home'); uninstallHomeToggle();
-    const grid=$('streamGrid'); mountHome(grid,homeFiles(m)); bindLightbox(grid); installHomeToggle(grid);
+    show('home');
+    const grid=$('streamGrid'); mountHome(grid,homeFiles(m)); bindLightbox(grid);
   };
 
   loadManifest().then(m=>{
