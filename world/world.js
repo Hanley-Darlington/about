@@ -9,7 +9,9 @@ const HOME={lat:46.8,lng:8.2,altitude:1.9};   // starting view and Recenter targ
 // Everywhere visited: name (lower-case) -> [country, pin lat, pin lng, display name]
 // A line here unlocks its country straight away. Once a Pictures folder with the same name holds photos, it becomes an album.
 // That folder can sit inside another (Pictures/England/London): the outer folder then decides the country, and the line only places the pin.
-// A Pictures folder named exactly after a country works without a line; any other folder without one is listed, but stays off the globe.
+// A Pictures folder named after a country works without a line; any other folder without one is listed, but stays off the globe.
+// Names are matched loosely: capitals, underscores, hyphens and extra spaces make no difference, so a folder called South_Africa is South Africa.
+const key=s=>String(s||'').toLowerCase().replace(/[\s_-]+/g,' ').trim();
 const PLACES={
   australia:['Australia',-25.3,133.8],
   austria:['Austria',47.6,14.1],
@@ -18,6 +20,7 @@ const PLACES={
   bordeaux:['France',44.84,-0.58],
   bosnia:['Bosnia',44,17.8],
   croatia:['Croatia',45.1,15.2],
+  dordogne:['France',45.1,0.75],
   dubai:['United Arab Emirates',25.2,55.27,'Dubai'],
   galapagos:['Ecuador',-0.6,-90.5],
   germany:['Germany',51.1,10.4],
@@ -47,8 +50,10 @@ const PLACES={
   turkey:['Turkey',39,35.2],
   wales:['Wales',52.3,-3.7]
 };
-// atlas names shown under a different name
-const NAMES={'Netherlands':'Holland','Bosnia and Herz.':'Bosnia'};
+// atlas names shown under a different name; the atlas shortens some, and a folder could never be expected to match "Dominican Rep."
+const NAMES={'Netherlands':'Holland','Bosnia and Herz.':'Bosnia','Central African Rep.':'Central African Republic',"Côte d'Ivoire":'Ivory Coast','Dem. Rep. Congo':'DR Congo',
+  'Dominican Rep.':'Dominican Republic','Eq. Guinea':'Equatorial Guinea','Falkland Is.':'Falkland Islands','Macedonia':'North Macedonia','N. Cyprus':'Northern Cyprus',
+  'S. Sudan':'South Sudan','Solomon Is.':'Solomon Islands','W. Sahara':'Western Sahara'};
 
 const LOCK='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 const TEMPLATE=`
@@ -75,22 +80,22 @@ const css=new Promise((res,rej)=>{const l=document.createElement('link'); l.rel=
 // rough centre of a country: the average corner of its largest outline
 const centre=f=>{const c=f.geometry.coordinates, ring=(f.geometry.type==='Polygon'?[c]:c).map(p=>p[0]).sort((a,b)=>b.length-a.length)[0].map(([lng,lat])=>({lat,lng})); return [avg(ring,'lat'),avg(ring,'lng')];};
 
-export default function createWorld({$,fetchJSON,mapFile,imgNode,vidNode}){
+export default function createWorld({$,fetchJSON,mapFile,imgNode,vidNode,label}){
   const still=matchMedia('(prefers-reduced-motion:reduce)').matches;
   let by=null, g=null, boot=null, active=false, seen=true, sel=null, hover=null, hold=false, timer=0;
 
   // places grouped by country, keyed by the lower-cased country name; a place whose Pictures folder has files is an album
   const groups=m=>{if(by) return by; by={};
     const has={};
-    const add=(name,p,folder,leaf)=>{const k=name.toLowerCase(), c=by[k]||(by[k]={name,places:[]});
+    const add=(name,p,folder,leaf)=>{const k=key(name), c=by[k]||(by[k]={name,places:[]});
       c.places.push({folder,title:p[3]||leaf||p[0],lat:p[1],lng:p[2],files:(m.pictures[folder]||[]).map(mapFile)});};
     // every folder is a place, looked up by its own name; its country comes from the outermost folder it sits in
-    Object.keys(m.pictures).forEach(folder=>{const path=folder.split('/'), leaf=path.pop(), top=path[0]||leaf, k=leaf.toLowerCase();
-      has[k]=true; add((PLACES[top.toLowerCase()]||[top])[0],PLACES[k]||[],folder,leaf);});
+    Object.keys(m.pictures).forEach(folder=>{const path=label(folder).split('/'), leaf=path.pop(), top=path[0]||leaf, k=key(leaf);
+      has[k]=true; add((PLACES[key(top)]||[top])[0],PLACES[k]||[],folder,leaf);});
     Object.entries(PLACES).forEach(([k,p])=>{if(!has[k]) add(p[0],p);});
     Object.values(by).forEach(c=>{c.albums=c.places.filter(a=>a.files.length);});
     return by;};
-  const country=name=>by[String(name||'').toLowerCase()];
+  const country=name=>by[key(name)];
   const isOpen=f=>!!country(f.properties.name);
 
   const nAlbums=n=>n+(n>1?' albums':' album');
@@ -147,7 +152,7 @@ export default function createWorld({$,fetchJSON,mapFile,imgNode,vidNode}){
     feats.push({type:'Feature',properties:{name:'French Guiana'},geometry:{type:'MultiPolygon',coordinates:fr.geometry.coordinates.filter(overseas)}});
     fr.geometry.coordinates=fr.geometry.coordinates.filter(p=>!overseas(p));
 
-    const byName=Object.fromEntries(feats.map(f=>[f.properties.name.toLowerCase(),f]));
+    const byName=Object.fromEntries(feats.map(f=>[key(f.properties.name),f]));
     Object.entries(by).forEach(([k,c])=>{const f=byName[k]; if(f) c.name=f.properties.name;
       c.places.forEach(a=>{a.country=c.name; if(a.lat==null&&f) [a.lat,a.lng]=centre(f);
         // a country that has a shape on the globe only gets a pin once it has photos

@@ -216,6 +216,7 @@
       .then(buildManifest));
 
   const mapFile=p=>({src:raw(p),alt:p.split('/').pop(),type:mExt(p)?'video':'image'});
+  const label=s=>s.replace(/_/g,' ');   // a folder's name as shown on the page: South_Africa reads South Africa
   const listPortfolio=m=>m.portfolio.map(mapFile);
   const listAlbum=(m,f)=>(m.pictures[f]||[]).map(mapFile);
 
@@ -258,7 +259,7 @@
     const names=[...new Set(Object.keys(FILMS).concat(Object.keys(m.films)))];
     (names.length?names:['']).forEach(name=>{
       const film=document.createElement('article'), movie=box('film-movie','Film coming soon'), album=box('film-album','Production stills coming soon');
-      film.className='film'; if(names.length>1) film.appendChild(Object.assign(document.createElement('h3'),{textContent:name}));
+      film.className='film'; if(names.length>1) film.appendChild(Object.assign(document.createElement('h3'),{textContent:label(name)}));
       if(FILMS[name]) movie.replaceChildren(Object.assign(document.createElement('iframe'),{src:'https://player.vimeo.com/video/'+FILMS[name]+'?dnt=1',title:name,allow:'fullscreen; picture-in-picture',loading:'lazy'}));
       if(m.films[name]){const stills=box('gallery film-stills',''); mountGrid(stills,m.films[name].map(mapFile)); album.replaceChildren(stills);}
       film.append(movie,album); el.appendChild(film);
@@ -276,7 +277,7 @@
   const world=(()=>{let mod=null, on=false;
     const load=()=>mod||(mod=fetch('./world/world.js',{method:'HEAD',cache:'no-cache'})
       .then(r=>import('./world/world.js?v='+encodeURIComponent(r.headers.get('etag')||r.headers.get('last-modified')||'')))
-      .then(x=>x.default({$,fetchJSON,mapFile,imgNode,vidNode})));
+      .then(x=>x.default({$,fetchJSON,mapFile,imgNode,vidNode,label})));
     return {open:(m,country)=>{on=true; load().then(w=>{if(on) w.open(m,country);}).catch(()=>{mod=null; $('world').textContent='Could not load this page. Check your connection and try again.';});},
       close:()=>{on=false; if(mod) mod.then(w=>w.close()).catch(()=>{});}};
   })();
@@ -291,7 +292,7 @@
     if(h.startsWith('/travels')){location.replace('#/world'); return;}
     if(h.startsWith('/films')){show('films'); mountFilms($('films'),m); bindLightbox($('films')); return;}
     if(h.startsWith('/world')){const country=decodeURIComponent(h.split('/')[2]||''); show(country?'country':'world'); world.open(m,country); return;}
-    if(h.startsWith('/travel/')){const folder=decodeURIComponent(h.slice('/travel/'.length)); show('album'); $('albumTitle').textContent=folder.split('/').pop();
+    if(h.startsWith('/travel/')){const folder=decodeURIComponent(h.slice('/travel/'.length)); show('album'); $('albumTitle').textContent=label(folder.split('/').pop());
       const country=from.startsWith('/world/')?decodeURIComponent(from.split('/')[2]):'', back=$('albumBack'); back.href=country?'#'+from:'#/world'; back.textContent='← '+(country||'World');
       mountGrid($('albumGrid'),listAlbum(m,folder)); bindLightbox($('albumGrid')); return;}
     // HOME
